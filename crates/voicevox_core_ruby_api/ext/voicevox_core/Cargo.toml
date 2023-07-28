@@ -1,0 +1,12 @@
+[package]
+name = "voicevox_core_ruby_api"
+version = "0.0.0"
+edition.workspace = true
+publish.workspace = true
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+magnus = { version = "0.4" }
+voicevox_core.workspace = true

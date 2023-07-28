@@ -4150,9 +4150,10 @@ dependencies = [
 
 [[package]]
 name = "voicevox_core_ruby_api"
-version = "0.1.0"
+version = "0.0.0"
 dependencies = [
  "magnus",
+ "voicevox_core",
 ]
 
 [[package]]

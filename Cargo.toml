@@ -5,7 +5,7 @@ members = [
     "crates/voicevox_core",
     "crates/voicevox_core_c_api",
     "crates/voicevox_core_python_api",
-    "crates/voicevox_core_ruby_api/ext/voicevox_core_ruby_api",
+    "crates/voicevox_core_ruby_api/ext/voicevox_core",
     "crates/xtask"
 ]
 

@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require "voicevox_core_ruby_api"
+require "voicevox_core"
 
 RSpec.configure do |config|
   # Enable flags like --only-failures and --next-failure
