@@ -5,10 +5,9 @@ RSpec.describe VoicevoxCore::UserDict do
     expect(VoicevoxCore::UserDict.new).to be_a VoicevoxCore::UserDict
   end
 
-  it "can add entries" do
-    pending
+  it "can add word" do
     dict = VoicevoxCore::UserDict.new
-    dict.add_entry("foo", "bar")
-    expect(dict.entries).to eq [%w[foo bar]]
+    word = VoicevoxCore::UserDict::Word.new("hoge", "ホゲ")
+    expect { dict.add_word word }.not_to raise_error
   end
 end

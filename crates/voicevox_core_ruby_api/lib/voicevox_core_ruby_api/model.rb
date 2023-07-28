@@ -5,9 +5,17 @@ module VoicevoxCore
   end
   SupportedDevices = Struct.new(:cpu, :cuda, :dml, keyword_init: true)
 
-  UserDictWord = Struct.new(:surface, :pronunciation, :priority, :accent_type, :word_type, keyword_init: true) do
-    def initialize(word:, pronunciation:, priority: 0, accent_type: 0, word_type: 0)
-      super
+  class UserDict
+    Word = Struct.new(:surface, :pronunciation, :priority, :accent_type, :word_type, keyword_init: true) do
+      def initialize(surface, pronunciation, priority: 5, accent_type: 0, word_type: :proper_noun)
+        super(
+          surface: surface,
+          pronunciation: pronunciation,
+          priority: priority,
+          accent_type: accent_type,
+          word_type: word_type
+        )
+      end
     end
   end
 end

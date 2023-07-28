@@ -9,7 +9,7 @@ pub struct UserDict {
 }
 
 impl UserDict {
-    pub fn initialize() -> Result<Self, Error> {
+    pub fn new() -> Result<Self, Error> {
         Ok(Self {
             user_dict: Arc::new(Mutex::new(voicevox_core::UserDict::new())),
         })
