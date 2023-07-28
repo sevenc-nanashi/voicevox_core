@@ -370,6 +370,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "bindgen"
+version = "0.62.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c6720a8b7b2d39dd533285ed438d458f65b31b5c257e6ac7bb3d7e82844dd722"
+dependencies = [
+ "bitflags",
+ "cexpr",
+ "clang-sys",
+ "lazy_static",
+ "lazycell",
+ "peeking_take_while",
+ "proc-macro2",
+ "quote",
+ "regex",
+ "rustc-hash",
+ "shlex",
+ "syn 1.0.102",
+]
+
+[[package]]
 name = "binstall-tar"
 version = "0.4.39"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1972,6 +1992,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "magnus"
+version = "0.4.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fc87660cd7daa49fddbfd524c836de54d5c927d520cd163f43700c5087c57d6c"
+dependencies = [
+ "magnus-macros",
+ "rb-sys",
+ "rb-sys-env",
+]
+
+[[package]]
+name = "magnus-macros"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "206cb23bfeea05180c97522ef6a3e52a4eb17b0ed2f30ee3ca9c4f994d2378ae"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 1.0.102",
+]
+
+[[package]]
 name = "matchers"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2296,7 +2338,7 @@ name = "open_jtalk-sys"
 version = "0.16.111"
 source = "git+https://github.com/VOICEVOX/open_jtalk-rs.git?rev=a16714ce16dec76fd0e3041a7acfa484921db3b5#a16714ce16dec76fd0e3041a7acfa484921db3b5"
 dependencies = [
- "bindgen",
+ "bindgen 0.60.1",
  "cmake",
  "link-cplusplus",
 ]
@@ -2803,6 +2845,36 @@ dependencies = [
 ]
 
 [[package]]
+name = "rb-sys"
+version = "0.9.79"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "939fb78db3e4f26665c1d4c7b91ca66d3578335a19aba552d4a6445811d07072"
+dependencies = [
+ "rb-sys-build",
+]
+
+[[package]]
+name = "rb-sys-build"
+version = "0.9.79"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "335a95eb0420d52fa94ef12019df3c2c250c6b19cbb3c60bd05cb7e9c362072c"
+dependencies = [
+ "bindgen 0.62.0",
+ "lazy_static",
+ "proc-macro2",
+ "quote",
+ "regex",
+ "shell-words",
+ "syn 1.0.102",
+]
+
+[[package]]
+name = "rb-sys-env"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a35802679f07360454b418a5d1735c89716bde01d35b1560fc953c1415a0b3bb"
+
+[[package]]
 name = "redox_syscall"
 version = "0.2.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3220,6 +3292,12 @@ dependencies = [
  "libc",
  "winapi",
 ]
+
+[[package]]
+name = "shell-words"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "24188a676b6ae68c3b2cb3a01be17fbf7240ce009799bb56d5b1409051e78fde"
 
 [[package]]
 name = "shlex"
@@ -4068,6 +4146,13 @@ dependencies = [
  "tracing",
  "uuid",
  "voicevox_core",
+]
+
+[[package]]
+name = "voicevox_core_ruby_api"
+version = "0.1.0"
+dependencies = [
+ "magnus",
 ]
 
 [[package]]
