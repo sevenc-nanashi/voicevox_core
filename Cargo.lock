@@ -4155,6 +4155,7 @@ dependencies = [
  "anyhow",
  "easy-ext",
  "magnus",
+ "strum",
  "voicevox_core",
 ]
 

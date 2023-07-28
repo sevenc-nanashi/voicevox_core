@@ -11,4 +11,5 @@ crate-type = ["cdylib"]
 anyhow.workspace = true
 easy-ext = "1.0.1"
 magnus = { version = "0.4" }
+strum.workspace = true
 voicevox_core.workspace = true
