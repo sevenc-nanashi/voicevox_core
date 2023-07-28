@@ -1,14 +1,12 @@
-use easy_ext::ext;
-use magnus::{
-    class, define_module, eval, exception, function, prelude::*, scan_args::scan_args, Error,
-    ExceptionClass, RClass, Symbol, TryConvert, Value,
-};
-use std::{
-    collections::HashMap,
-    fmt::Display,
-    sync::{Arc, Mutex},
-};
-use strum::EnumString;
+mod open_jtalk;
+mod result;
+mod user_dict;
+use crate::open_jtalk::OpenJtalk;
+use crate::result::*;
+use crate::user_dict::UserDict;
+
+use magnus::{class, define_module, eval, function, prelude::*, Error, RClass, Value};
+use std::collections::HashMap;
 
 #[magnus::init]
 fn init() -> Result<(), Error> {
@@ -21,103 +19,9 @@ fn init() -> Result<(), Error> {
     let user_dict = module.define_class("UserDict", class::object())?;
     user_dict.define_singleton_method("initialize", function!(UserDict::initialize, 0))?;
     user_dict.define_method("load", function!(UserDict::load, 2))?;
+    user_dict.define_method("save", function!(UserDict::save, 2))?;
+    user_dict.define_method("add_word", function!(UserDict::add_word, 2))?;
     Ok(())
-}
-
-#[magnus::wrap(class = "VoicevoxCore::OpenJtalk", free_immediately, size)]
-struct OpenJtalk {
-    open_jtalk: Arc<voicevox_core::OpenJtalk>,
-}
-
-impl OpenJtalk {
-    fn initialize(args: &[Value]) -> Result<Self, Error> {
-        let args = scan_args::<(), (Option<Value>,), (), (), (), ()>(args)?;
-
-        let (dict_dir,) = args.optional;
-        let open_jtalk = if let Some(dict_dir) = dict_dir {
-            let dict_dir: String = dict_dir.funcall("to_s", []).into_rb_result()?;
-            voicevox_core::OpenJtalk::new_with_initialize(dict_dir).into_rb_result()?
-        } else {
-            voicevox_core::OpenJtalk::new_without_dic()
-        };
-
-        Ok(Self {
-            open_jtalk: Arc::new(open_jtalk),
-        })
-    }
-
-    fn use_user_dict(&self, user_dict: &UserDict) -> Result<(), Error> {
-        {
-            let dict = user_dict
-                .user_dict
-                .lock()
-                .expect("Failed to lock user_dict");
-            self.open_jtalk.use_user_dict(&dict).into_rb_result()?;
-        }
-        Ok(())
-    }
-}
-
-#[magnus::wrap(class = "VoicevoxCore::UserDict", free_immediately, size)]
-struct UserDict {
-    user_dict: Arc<Mutex<voicevox_core::UserDict>>,
-}
-
-impl UserDict {
-    fn initialize() -> Result<Self, Error> {
-        Ok(Self {
-            user_dict: Arc::new(Mutex::new(voicevox_core::UserDict::new())),
-        })
-    }
-
-    fn load(&self, path: String) -> Result<(), Error> {
-        {
-            let mut dict = self.user_dict.lock().expect("Failed to lock user_dict");
-
-            dict.load(&path).into_rb_result()?;
-        }
-        Ok(())
-    }
-
-    fn save(&self, path: String) -> Result<(), Error> {
-        {
-            let dict = self.user_dict.lock().expect("Failed to lock user_dict");
-
-            dict.save(&path).into_rb_result()?;
-        }
-        Ok(())
-    }
-
-    fn add_word(&self, word: String, yomi: String) -> Result<(), Error> {
-        {
-            let mut dict = self.user_dict.lock().expect("Failed to lock user_dict");
-
-            dict.add_word(&word, &yomi).into_rb_result()?;
-        }
-        Ok(())
-    }
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, Hash, EnumString)]
-#[strum(serialize_all = "snake_case")]
-pub enum UserDictWordType {
-    ProperNoun,
-    CommonNoun,
-    Verb,
-    Adjective,
-    Suffix,
-}
-
-impl TryConvert for UserDictWordType {
-    fn try_convert(value: Value) -> Result<Self, Error> {
-        let value = value.try_convert::<Symbol>()?.to_string();
-        value.parse().map_err(|_| {
-            Error::Error(
-                exception::type_error(),
-                format!("単語の種類が不正です: {}", value).into(),
-            )
-        })
-    }
 }
 
 fn supported_devices() -> Result<Value, Error> {
@@ -133,12 +37,4 @@ fn supported_devices() -> Result<Value, Error> {
     map.insert("dml", devices.dml);
 
     ruby_struct.new_instance((map,))
-}
-
-#[ext]
-impl<T, E: Display> Result<T, E> {
-    fn into_rb_result(self) -> Result<T, Error> {
-        let err_class = ExceptionClass::from_value(eval("VoicevoxCore::VoicevoxError")?).unwrap();
-        self.map_err(|e| Error::Error(err_class, format!("{}", e).into()))
-    }
 }
