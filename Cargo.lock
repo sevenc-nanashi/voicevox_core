@@ -4152,6 +4152,8 @@ dependencies = [
 name = "voicevox_core_ruby_api"
 version = "0.0.0"
 dependencies = [
+ "anyhow",
+ "easy-ext",
  "magnus",
  "voicevox_core",
 ]
