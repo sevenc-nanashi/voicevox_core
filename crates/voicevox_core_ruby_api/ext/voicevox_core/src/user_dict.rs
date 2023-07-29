@@ -1,4 +1,6 @@
 use crate::result::*;
+use magnus::value::{Qnil, ReprValue};
+use magnus::Class;
 use magnus::{
     block::Proc, eval, exception, scan_args::scan_args, Error, IntoValue, RClass, RHash, Symbol,
     TryConvert, Value, QNIL,
@@ -86,9 +88,9 @@ impl UserDict {
 
         let block = args.block;
         if let Some(block) = block {
-            hash.funcall_with_block("each", [], block)
+            hash.funcall_with_block("each", (), block)
         } else {
-            hash.funcall("each", [])
+            hash.funcall("each", ())
         }
     }
 }
@@ -107,9 +109,9 @@ impl TryConvert for UserDictWordType {
     fn try_convert(value: Value) -> Result<Self, Error> {
         let value = value.try_convert::<Symbol>()?.to_string();
         value.parse().map_err(|_| {
-            Error::Error(
+            Error::new(
                 exception::type_error(),
-                format!("単語の種類が不正です: {}", value).into(),
+                format!("単語の種類が不正です: {}", value),
             )
         })
     }
@@ -124,19 +126,19 @@ impl IntoValue for UserDictWordType {
 }
 fn to_rust_user_dict_word(word: Value) -> Result<voicevox_core::UserDictWord, Error> {
     if !word.is_kind_of(eval::<RClass>("VoicevoxCore::UserDict::Word").unwrap()) {
-        return Err(Error::Error(
+        return Err(Error::new(
             exception::type_error(),
-            "VoicevoxCore::UserDict::Word 以外のオブジェクトを渡すことはできません".into(),
+            "VoicevoxCore::UserDict::Word 以外のオブジェクトを渡すことはできません",
         ));
     }
-    let surface: String = word.funcall("surface", []).into_rb_result()?;
-    let word_type: UserDictWordType = word.funcall("word_type", [])?;
+    let surface: String = word.funcall("surface", ()).into_rb_result()?;
+    let word_type: UserDictWordType = word.funcall("word_type", ())?;
     voicevox_core::UserDictWord::new(
         &surface,
-        word.funcall("pronunciation", [])?,
-        word.funcall("accent_type", [])?,
+        word.funcall("pronunciation", ())?,
+        word.funcall("accent_type", ())?,
         word_type.into(),
-        word.funcall("priority", [])?,
+        word.funcall("priority", ())?,
     )
     .into_rb_result()
 }

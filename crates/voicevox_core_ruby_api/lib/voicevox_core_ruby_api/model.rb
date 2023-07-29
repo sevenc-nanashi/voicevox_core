@@ -22,4 +22,34 @@ module VoicevoxCore
       end
     end
   end
+
+  SpeakerMeta = Struct.new(:name, :styles, :speaker_uuid, :version)
+  StyleMeta = Struct.new(:name, :id)
+
+  AudioQuery = Struct.new(
+    :accent_phrases,
+    :speed_scale,
+    :pitch_scale,
+    :intonation_scale,
+    :volume_scale,
+    :pre_phoneme_length,
+    :post_phoneme_length,
+    :output_sampling_rate,
+    :output_stereo,
+    :kana
+  )
+  AccentPhrase = Struct.new(
+    :moras,
+    :accent,
+    :pause_mora,
+    :is_interrogative
+  )
+  Mora = Struct.new(
+    :text,
+    :consonant,
+    :consonant_length,
+    :vowel,
+    :vowel_length,
+    :pitch
+  )
 end

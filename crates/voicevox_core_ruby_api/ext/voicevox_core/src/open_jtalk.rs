@@ -1,5 +1,6 @@
 use crate::result::*;
 use crate::user_dict::UserDict;
+use magnus::value::ReprValue;
 use magnus::{scan_args::scan_args, Error, Value};
 
 #[magnus::wrap(class = "VoicevoxCore::OpenJtalk", free_immediately, size)]
@@ -13,7 +14,7 @@ impl OpenJtalk {
 
         let (dict_dir,) = args.optional;
         let open_jtalk = if let Some(dict_dir) = dict_dir {
-            let dict_dir: String = dict_dir.funcall("to_s", []).into_rb_result()?;
+            let dict_dir: String = dict_dir.funcall("to_s", ()).into_rb_result()?;
             voicevox_core::OpenJtalk::new_with_initialize(dict_dir).into_rb_result()?
         } else {
             voicevox_core::OpenJtalk::new_without_dic()

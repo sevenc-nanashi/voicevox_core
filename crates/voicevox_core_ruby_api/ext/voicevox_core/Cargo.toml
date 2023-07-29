@@ -10,6 +10,9 @@ crate-type = ["cdylib"]
 [dependencies]
 anyhow.workspace = true
 easy-ext = "1.0.1"
-magnus = { version = "0.5" }
+magnus = { version = "0.6.0", features = ["rb-sys"] }
+once_cell.workspace = true
+rb-sys = "0.9.79"
 strum.workspace = true
+tokio.workspace = true
 voicevox_core.workspace = true

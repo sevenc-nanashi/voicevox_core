@@ -1,9 +1,12 @@
 mod open_jtalk;
 mod result;
+mod ruby_async;
 mod user_dict;
+mod voice_model;
 use crate::open_jtalk::OpenJtalk;
 use crate::result::*;
 use crate::user_dict::UserDict;
+use crate::voice_model::VoiceModel;
 
 use magnus::{
     class, define_module, eval, function, method, prelude::*, Error, RClass, RHash, Value,
@@ -34,6 +37,8 @@ fn init() -> Result<(), Error> {
     user_dict.define_method("import", method!(UserDict::import, 1))?;
     user_dict.define_method("each", method!(UserDict::each, -1))?;
     user_dict.include_module(eval("Enumerable").unwrap())?;
+    let voice_model = module.define_class("VoiceModel", class::object())?;
+    voice_model.define_singleton_method("from_path", function!(VoiceModel::from_path, 1))?;
     Ok(())
 }
 
@@ -47,7 +52,11 @@ fn supported_devices() -> Result<Value, Error> {
     map.aset("cuda", *devices.cuda())?;
     map.aset("dml", *devices.dml())?;
 
-    ruby_struct.new_instance((map,))
+    let ret = ruby_struct.new_instance((map,))?;
+
+    ret.freeze();
+
+    Ok(ret)
 }
 
 fn _validate_pronunciation(pronunciation: String) -> Result<(), Error> {

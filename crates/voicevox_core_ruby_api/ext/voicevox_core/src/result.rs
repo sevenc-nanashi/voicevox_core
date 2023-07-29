@@ -7,6 +7,6 @@ pub impl<T, E: Display> Result<T, E> {
     fn into_rb_result(self) -> Result<T, Error> {
         let err_class =
             ExceptionClass::from_value(eval("VoicevoxCore::VoicevoxError").unwrap()).unwrap();
-        self.map_err(|e| Error::Error(err_class, format!("{}", e).into()))
+        self.map_err(|e| Error::new(err_class, format!("{}", e)))
     }
 }
