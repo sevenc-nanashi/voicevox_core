@@ -4,9 +4,9 @@ use super::*;
 
 #[derive(Getters, Debug, Serialize, Deserialize)]
 pub struct SupportedDevices {
-    pub cpu: bool,
-    pub cuda: bool,
-    pub dml: bool,
+    cpu: bool,
+    cuda: bool,
+    dml: bool,
 }
 
 impl SupportedDevices {

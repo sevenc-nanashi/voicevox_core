@@ -8,6 +8,8 @@ RSpec.describe VoicevoxCore::UserDict do
   it "can add word" do
     dict = VoicevoxCore::UserDict.new
     word = VoicevoxCore::UserDict::Word.new("hoge", "ホゲ")
-    expect { dict.add_word word }.not_to raise_error
+    uuid = dict.add_word(word)
+    expect(uuid).to be_a String
+    expect(dict.get_word(uuid)).to eq word
   end
 end

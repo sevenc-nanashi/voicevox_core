@@ -1,13 +1,13 @@
 mod open_jtalk;
 mod result;
 mod user_dict;
-mod utils;
 use crate::open_jtalk::OpenJtalk;
 use crate::result::*;
 use crate::user_dict::UserDict;
 
-use magnus::{class, define_module, eval, function, method, prelude::*, Error, RClass, Value};
-use std::collections::HashMap;
+use magnus::{
+    class, define_module, eval, function, method, prelude::*, Error, RClass, RHash, Value,
+};
 
 #[magnus::init]
 fn init() -> Result<(), Error> {
@@ -22,19 +22,25 @@ fn init() -> Result<(), Error> {
     user_dict.define_method("load", method!(UserDict::load, 1))?;
     user_dict.define_method("save", method!(UserDict::save, 1))?;
     user_dict.define_method("add_word", method!(UserDict::add_word, 1))?;
+    user_dict.define_method("update_word", method!(UserDict::update_word, 2))?;
+    user_dict.define_method("remove_word", method!(UserDict::remove_word, 1))?;
+    user_dict.define_method("get_word", method!(UserDict::get_word, 1))?;
+    user_dict.define_method("each", method!(UserDict::each, -1))?;
+    user_dict.include_module(eval("Enumerable").unwrap())?;
+    user_dict.define_alias("[]", "get_word")?;
+    user_dict.define_alias("[]=", "update_word")?;
     Ok(())
 }
 
 fn supported_devices() -> Result<Value, Error> {
     let devices = voicevox_core::SupportedDevices::create().into_rb_result()?;
 
-    let ruby_struct = RClass::from_value(eval("VoicevoxCore::SupportedDevices").into_rb_result()?)
-        .expect("Failed to get VoicevoxCore::SupportedDevices");
-    let mut map = HashMap::new();
+    let ruby_struct = eval::<RClass>("VoicevoxCore::SupportedDevices").into_rb_result()?;
+    let map = RHash::new();
 
-    map.insert("cpu", devices.cpu);
-    map.insert("cuda", devices.cuda);
-    map.insert("dml", devices.dml);
+    map.aset("cpu", *devices.cpu())?;
+    map.aset("cuda", *devices.cuda())?;
+    map.aset("dml", *devices.dml())?;
 
     ruby_struct.new_instance((map,))
 }

@@ -35,6 +35,14 @@ impl UserDict {
         Ok(())
     }
 
+    /// ユーザー辞書の単語を取得する。
+    pub fn get_word(&mut self, word_uuid: Uuid) -> Result<&UserDictWord> {
+        if !self.words.contains_key(&word_uuid) {
+            return Err(Error::UnknownWord(word_uuid));
+        }
+        Ok(self.words.get(&word_uuid).unwrap())
+    }
+
     /// ユーザー辞書に単語を追加する。
     pub fn add_word(&mut self, word: UserDictWord) -> Result<Uuid> {
         let word_uuid = Uuid::new_v4();

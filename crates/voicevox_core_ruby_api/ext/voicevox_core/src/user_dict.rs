@@ -1,5 +1,8 @@
 use crate::result::*;
-use magnus::{eval, exception, Error, RClass, Symbol, TryConvert, Value};
+use magnus::{
+    block::Proc, eval, exception, scan_args::scan_args, Error, IntoValue, RClass, RHash, Symbol,
+    TryConvert, Value,
+};
 use std::sync::{Arc, Mutex};
 use strum::EnumString;
 
@@ -33,36 +36,58 @@ impl UserDict {
         Ok(())
     }
 
-    pub fn add_word(&self, word: Value) -> Result<(), Error> {
-        if !word
-            .class()
-            .equal(RClass::from_value(eval("VoicevoxCore::UserDict::Word").unwrap()).unwrap())?
-        {
-            return Err(Error::Error(
-                exception::type_error(),
-                "VoicevoxCore::UserDict::Word 以外のオブジェクトを渡すことはできません".into(),
-            ));
-        }
-        let surface: String = word.funcall("surface", []).into_rb_result()?;
-        let word_type: UserDictWordType = word.funcall("word_type", [])?;
-        let word = voicevox_core::UserDictWord::new(
-            &surface,
-            word.funcall("pronunciation", [])?,
-            word.funcall("accent_type", [])?,
-            word_type.into(),
-            word.funcall("priority", [])?,
+    pub fn get_word(&self, word_uuid: String) -> Result<Value, Error> {
+        let mut dict = self.user_dict.lock().expect("Failed to lock user_dict");
+        to_ruby_user_dict_word(
+            dict.get_word(word_uuid.parse().into_rb_result()?)
+                .into_rb_result()?,
         )
-        .into_rb_result()?;
+    }
+    pub fn add_word(&self, word: Value) -> Result<String, Error> {
+        let word = to_rust_user_dict_word(word)?;
+        let uuid = {
+            let mut dict = self.user_dict.lock().expect("Failed to lock user_dict");
+            dict.add_word(word).into_rb_result()?
+        };
+        Ok(uuid.to_string())
+    }
+    pub fn update_word(&self, word_uuid: String, new_word: Value) -> Result<(), Error> {
+        let new_word = to_rust_user_dict_word(new_word)?;
         {
             let mut dict = self.user_dict.lock().expect("Failed to lock user_dict");
-
-            dict.add_word(word).into_rb_result()?;
+            dict.update_word(word_uuid.parse().into_rb_result()?, new_word)
+                .into_rb_result()?;
         }
         Ok(())
     }
+    pub fn remove_word(&self, word_uuid: String) -> Result<(), Error> {
+        {
+            let mut dict = self.user_dict.lock().expect("Failed to lock user_dict");
+            dict.remove_word(word_uuid.parse().into_rb_result()?)
+                .into_rb_result()?;
+        }
+        Ok(())
+    }
+    pub fn each(&self, args: &[Value]) -> Result<Value, Error> {
+        let args = scan_args::<(), (), (), (), (), Option<Proc>>(args)?;
+        let hash = RHash::new();
+        {
+            let dict = self.user_dict.lock().expect("Failed to lock user_dict");
+            for (uuid, word) in dict.words() {
+                hash.aset(uuid.to_string(), to_ruby_user_dict_word(word)?)?;
+            }
+        }
+
+        let block = args.block;
+        if let Some(block) = block {
+            hash.funcall_with_block("each", [], block)
+        } else {
+            hash.funcall("each", [])
+        }
+    }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash, EnumString)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, EnumString, strum::Display)]
 #[strum(serialize_all = "snake_case")]
 pub enum UserDictWordType {
     ProperNoun,
@@ -83,6 +108,46 @@ impl TryConvert for UserDictWordType {
         })
     }
 }
+impl IntoValue for UserDictWordType {
+    fn into_value(self) -> Value {
+        Symbol::new(self.to_string()).into_value()
+    }
+    fn into_value_with(self, handle: &magnus::Ruby) -> Value {
+        handle.sym_new(self.to_string()).into_value()
+    }
+}
+fn to_rust_user_dict_word(word: Value) -> Result<voicevox_core::UserDictWord, Error> {
+    if !word.is_kind_of(eval::<RClass>("VoicevoxCore::UserDict::Word").unwrap()) {
+        return Err(Error::Error(
+            exception::type_error(),
+            "VoicevoxCore::UserDict::Word 以外のオブジェクトを渡すことはできません".into(),
+        ));
+    }
+    let surface: String = word.funcall("surface", []).into_rb_result()?;
+    let word_type: UserDictWordType = word.funcall("word_type", [])?;
+    voicevox_core::UserDictWord::new(
+        &surface,
+        word.funcall("pronunciation", [])?,
+        word.funcall("accent_type", [])?,
+        word_type.into(),
+        word.funcall("priority", [])?,
+    )
+    .into_rb_result()
+}
+fn to_ruby_user_dict_word(word: &voicevox_core::UserDictWord) -> Result<Value, Error> {
+    let map = RHash::new();
+    map.aset("accent_type", *word.accent_type())?;
+    map.aset(
+        "word_type",
+        UserDictWordType::from(word.word_type().to_owned()),
+    )?;
+    map.aset("priority", *word.priority())?;
+    eval::<RClass>("VoicevoxCore::UserDict::Word")?.new_instance((
+        word.surface().clone(),
+        word.pronunciation().clone(),
+        map,
+    ))
+}
 
 impl From<UserDictWordType> for voicevox_core::UserDictWordType {
     fn from(val: UserDictWordType) -> Self {
@@ -92,6 +157,17 @@ impl From<UserDictWordType> for voicevox_core::UserDictWordType {
             UserDictWordType::Verb => voicevox_core::UserDictWordType::Verb,
             UserDictWordType::Adjective => voicevox_core::UserDictWordType::Adjective,
             UserDictWordType::Suffix => voicevox_core::UserDictWordType::Suffix,
+        }
+    }
+}
+impl From<voicevox_core::UserDictWordType> for UserDictWordType {
+    fn from(val: voicevox_core::UserDictWordType) -> Self {
+        match val {
+            voicevox_core::UserDictWordType::ProperNoun => UserDictWordType::ProperNoun,
+            voicevox_core::UserDictWordType::CommonNoun => UserDictWordType::CommonNoun,
+            voicevox_core::UserDictWordType::Verb => UserDictWordType::Verb,
+            voicevox_core::UserDictWordType::Adjective => UserDictWordType::Adjective,
+            voicevox_core::UserDictWordType::Suffix => UserDictWordType::Suffix,
         }
     }
 }
