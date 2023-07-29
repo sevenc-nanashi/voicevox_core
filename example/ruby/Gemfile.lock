@@ -1,0 +1,17 @@
+PATH
+  remote: ../../crates/voicevox_core_ruby_api
+  specs:
+    voicevox_core (0.0.0)
+
+GEM
+  remote: https://rubygems.org/
+  specs:
+
+PLATFORMS
+  x86_64-linux
+
+DEPENDENCIES
+  voicevox_core!
+
+BUNDLED WITH
+   2.4.17

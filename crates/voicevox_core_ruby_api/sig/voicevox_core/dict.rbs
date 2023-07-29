@@ -1,0 +1,21 @@
+module VoicevoxCore
+  class UserDict
+    def initialize: () -> void
+    def load: (String path) -> void
+    def save: (String path) -> void
+
+    def get_word: (String uuid) -> Word
+
+    def add_word: (Word word) -> String
+
+    def update_word: (String uuid, Word word) -> void
+
+    def remove_word: (String uuid) -> void
+
+    class Word
+      type word_type = :proper_noun | :common_noun | :verb | :adjective | :suffix
+      def initialize:
+        (String surface, String pronunciation, accent_type: Integer, priority: Integer, word_type: word_type) -> void
+    end
+  end
+end

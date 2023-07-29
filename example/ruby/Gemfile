@@ -1,0 +1,7 @@
+# frozen_string_literal: true
+
+source 'https://rubygems.org'
+
+gem 'voicevox_core', path: '../../crates/voicevox_core_ruby_api'
+
+# gem "rails"

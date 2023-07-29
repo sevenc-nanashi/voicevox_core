@@ -30,10 +30,10 @@ fn init() -> Result<(), Error> {
     user_dict.define_method("update_word", method!(UserDict::update_word, 2))?;
     user_dict.define_method("remove_word", method!(UserDict::remove_word, 1))?;
     user_dict.define_method("get_word", method!(UserDict::get_word, 1))?;
+    user_dict.define_alias("[]", "get_word")?;
+    user_dict.define_method("import", method!(UserDict::import, 1))?;
     user_dict.define_method("each", method!(UserDict::each, -1))?;
     user_dict.include_module(eval("Enumerable").unwrap())?;
-    user_dict.define_alias("[]", "get_word")?;
-    user_dict.define_alias("[]=", "update_word")?;
     Ok(())
 }
 

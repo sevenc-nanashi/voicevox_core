@@ -66,6 +66,14 @@ impl UserDict {
         }
         Ok(())
     }
+    pub fn import(&self, other: &UserDict) -> Result<(), Error> {
+        {
+            let mut dict = self.user_dict.lock().expect("Failed to lock user_dict");
+            let other = other.user_dict.lock().expect("Failed to lock user_dict");
+            dict.import(&other).into_rb_result()?;
+        }
+        Ok(())
+    }
     pub fn each(&self, args: &[Value]) -> Result<Value, Error> {
         let args = scan_args::<(), (), (), (), (), Option<Proc>>(args)?;
         let hash = RHash::new();

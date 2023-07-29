@@ -1,0 +1,10 @@
+module VoicevoxCore
+  class VoicevoxError < StandardError
+  end
+
+  class SupportedDevices
+    attr_accessor cpu: bool
+    attr_accessor cuda: bool
+    attr_accessor dml: bool
+  end
+end

@@ -1,0 +1,3 @@
+module Fiddle
+  def self.dlopen: (String lib) -> void
+end
