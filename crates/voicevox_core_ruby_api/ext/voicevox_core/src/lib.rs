@@ -14,6 +14,11 @@ fn init() -> Result<(), Error> {
     let module = define_module("VoicevoxCore")?;
     module.const_set("VERSION", env!("CARGO_PKG_VERSION"))?;
     module.define_singleton_method("supported_devices", function!(supported_devices, 0))?;
+    module.define_singleton_method(
+        "_validate_pronunciation",
+        function!(_validate_pronunciation, 1),
+    )?;
+    module.define_singleton_method("_to_zenkaku", function!(_to_zenkaku, 1))?;
     let open_jtalk = module.define_class("OpenJtalk", class::object())?;
     open_jtalk.define_method("initialize", function!(OpenJtalk::initialize, -1))?;
     open_jtalk.define_method("use_user_dict", method!(OpenJtalk::use_user_dict, 1))?;
@@ -43,4 +48,12 @@ fn supported_devices() -> Result<Value, Error> {
     map.aset("dml", *devices.dml())?;
 
     ruby_struct.new_instance((map,))
+}
+
+fn _validate_pronunciation(pronunciation: String) -> Result<(), Error> {
+    voicevox_core::validate_pronunciation(&pronunciation).into_rb_result()
+}
+
+fn _to_zenkaku(s: String) -> Result<String, Error> {
+    Ok(voicevox_core::to_zenkaku(&s))
 }

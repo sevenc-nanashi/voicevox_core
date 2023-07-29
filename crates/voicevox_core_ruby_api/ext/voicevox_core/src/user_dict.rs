@@ -1,7 +1,7 @@
 use crate::result::*;
 use magnus::{
     block::Proc, eval, exception, scan_args::scan_args, Error, IntoValue, RClass, RHash, Symbol,
-    TryConvert, Value,
+    TryConvert, Value, QNIL,
 };
 use std::sync::{Arc, Mutex};
 use strum::EnumString;
@@ -38,10 +38,8 @@ impl UserDict {
 
     pub fn get_word(&self, word_uuid: String) -> Result<Value, Error> {
         let mut dict = self.user_dict.lock().expect("Failed to lock user_dict");
-        to_ruby_user_dict_word(
-            dict.get_word(word_uuid.parse().into_rb_result()?)
-                .into_rb_result()?,
-        )
+        dict.get_word(word_uuid.parse().into_rb_result()?)
+            .map_or_else(|_| Ok(QNIL.into_value()), to_ruby_user_dict_word)
     }
     pub fn add_word(&self, word: Value) -> Result<String, Error> {
         let word = to_rust_user_dict_word(word)?;
@@ -135,17 +133,12 @@ fn to_rust_user_dict_word(word: Value) -> Result<voicevox_core::UserDictWord, Er
     .into_rb_result()
 }
 fn to_ruby_user_dict_word(word: &voicevox_core::UserDictWord) -> Result<Value, Error> {
-    let map = RHash::new();
-    map.aset("accent_type", *word.accent_type())?;
-    map.aset(
-        "word_type",
-        UserDictWordType::from(word.word_type().to_owned()),
-    )?;
-    map.aset("priority", *word.priority())?;
     eval::<RClass>("VoicevoxCore::UserDict::Word")?.new_instance((
         word.surface().clone(),
         word.pronunciation().clone(),
-        map,
+        *word.priority(),
+        *word.accent_type(),
+        UserDictWordType::from(word.word_type().to_owned()),
     ))
 }
 
