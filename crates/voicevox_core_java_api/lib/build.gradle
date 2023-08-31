@@ -8,10 +8,15 @@
 plugins {
     // Apply the java-library plugin for API and implementation separation.
     id 'java-library'
+    id 'maven-publish'
     id "com.diffplug.spotless" version "6.20.0"
 }
 
-version = '0.0.0'
+def String cargoToml = file("../../../Cargo.toml").text
+def java.util.regex.Matcher versionMatcher = cargoToml =~ /(?m)^version = "(.*?)"/
+def String versionString = versionMatcher[0][1]
+
+version = versionString
 
 repositories {
     // Use Maven Central for resolving dependencies.
