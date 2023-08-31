@@ -288,10 +288,10 @@ jobs:
           ORT_USE_CUDA: ${{ matrix.use_cuda }}
       - name: build voicevox_core_java_api
         id: build-voicevox-core-java-api
+        working-directory: ./crates/voicevox_core_java_api
         run: |
           function build() {
-            cd ./crates/voicevox_core_java_api
-            gradle build
+            cargo build --features ${{ matrix.features }}, --target ${{ matrix.target }} --release
           }
           if ${{ github.event.inputs.is_production != 'true' }}; then
             build
