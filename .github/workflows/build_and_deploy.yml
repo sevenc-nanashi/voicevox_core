@@ -330,10 +330,9 @@ jobs:
       - name: Upload artifact to build Java API
         if: contains(matrix.target, 'ios') != true
         uses: actions/upload-artifact@v2
-        working-directory: target/${{ matrix.target }}/release
         with:
           name: voicevox_core-java-${{ matrix.artifact_name }}
-          path: "*voicevox_core_java_api.{dll,so,dylib}"
+          path: "target/${{ matrix.target }}/release/*voicevox_core_java_api.{dll,so,dylib}"
       - name: Archive artifact
         run: |
           cd artifact
