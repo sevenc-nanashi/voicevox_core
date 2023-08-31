@@ -513,14 +513,14 @@ jobs:
           mkdir -p "./lib/src/main/resources/lib/osx-arm64"
           mkdir -p "./lib/src/main/resources/jniLibs/arm64-v8a"
           mkdir -p "./lib/src/main/resources/jniLibs/x86_64"
-          cp -v "../../artifact/windows-x64-cpu/voicevox_core.dll" "./lib/src/main/resources/lib/windows-x64/voicevox_core_java_api.dll"
-          cp -v "../../artifact/windows-x86-cpu/voicevox_core.dll" "./lib/src/main/resources/lib/windows-x86/voicevox_core_java_api.dll"
-          cp -v "../../artifact/linux-x64-cpu/voicevox_core.so" "./lib/src/main/resources/lib/linux-x64/libvoicevox_core_java_api.so"
-          cp -v "../../artifact/linux-arm64-cpu/voicevox_core.so" "./lib/src/main/resources/lib/linux-arm64/libvoicevox_core_java_api.so"
-          cp -v "../../artifact/osx-x64-cpu/voicevox_core.dylib" "./lib/src/main/resources/lib/osx-x64/libvoicevox_core_java_api.dylib"
-          cp -v "../../artifact/osx-arm64-cpu/voicevox_core.dylib" "./lib/src/main/resources/lib/osx-arm64/libvoicevox_core_java_api.dylib"
-          cp -v "../../artifact/android-arm64-cpu/voicevox_core.so" "./lib/src/main/resources/jniLibs/arm64-v8a/libvoicevox_core_java_api.so"
-          cp -v "../../artifact/android-x86_64-cpu/voicevox_core.so" "./lib/src/main/resources/jniLibs/x86_64/libvoicevox_core_java_api.so"
+          cp -v "../../artifact/windows-x64-cpu/voicevox_core_java_api.dll" "./lib/src/main/resources/lib/windows-x64/voicevox_core_java_api.dll"
+          cp -v "../../artifact/windows-x86-cpu/voicevox_core_java_api.dll" "./lib/src/main/resources/lib/windows-x86/voicevox_core_java_api.dll"
+          cp -v "../../artifact/linux-x64-cpu/libvoicevox_core_java_api.so" "./lib/src/main/resources/lib/linux-x64/libvoicevox_core_java_api.so"
+          cp -v "../../artifact/linux-arm64-cpu/libvoicevox_core_java_api.so" "./lib/src/main/resources/lib/linux-arm64/libvoicevox_core_java_api.so"
+          cp -v "../../artifact/osx-x64-cpu/libvoicevox_core_java_api.dylib" "./lib/src/main/resources/lib/osx-x64/libvoicevox_core_java_api.dylib"
+          cp -v "../../artifact/osx-arm64-cpu/libvoicevox_core_java_api.dylib" "./lib/src/main/resources/lib/osx-arm64/libvoicevox_core_java_api.dylib"
+          cp -v "../../artifact/android-arm64-cpu/libvoicevox_core_java_api.so" "./lib/src/main/resources/jniLibs/arm64-v8a/libvoicevox_core_java_api.so"
+          cp -v "../../artifact/android-x86_64-cpu/libvoicevox_core_java_api.so" "./lib/src/main/resources/jniLibs/x86_64/libvoicevox_core_java_api.so"
       - name: build cpu version
         working-directory: crates/voicevox_core_java_api
         run: |
@@ -538,7 +538,7 @@ jobs:
         working-directory: crates/voicevox_core_java_api
         run: |
           cp -v "../../artifact/windows-x64-cuda/voicevox_core_java_api.dll" "./lib/src/main/resources/windows-x64/voicevox_core_java_api.dll"
-          cp -v "../../artifact/linux-x64-gpu/voicevox_core.so" "./lib/src/main/resources/lib/linux-x64/libvoicevox_core_java_api.so"
+          cp -v "../../artifact/linux-x64-gpu/libvoicevox_core_java_api.so" "./lib/src/main/resources/lib/linux-x64/libvoicevox_core_java_api.so"
 
           ./gradlew build
           cp ./lib/build/libs/lib-*.jar ../../build/voicevox_core_java_api-cuda.jar
