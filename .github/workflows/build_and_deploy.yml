@@ -343,7 +343,7 @@ jobs:
           path: artifact/${{ env.ASSET_NAME }}
       - name: Upload artifact to build Java API
         if: contains(matrix.target, 'ios') != true
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: voicevox_core-java-${{ matrix.artifact_name }}
           path: "target/${{ matrix.target }}/release/${{ env.JAVA_DLL_NAME }}"
@@ -430,67 +430,67 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: "Download artifact (windows-x64-cpu)"
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: voicevox_core-java-windows-x64-cpu
           path: artifact/windows-x64-cpu
 
       - name: "Download artifact (windows-x64-directml)"
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: voicevox_core-java-windows-x64-directml
           path: artifact/windows-x64-directml
 
       - name: "Download artifact (windows-x64-cuda)"
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: voicevox_core-java-windows-x64-cuda
           path: artifact/windows-x64-cuda
 
       - name: "Download artifact (windows-x86-cpu)"
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: voicevox_core-java-windows-x86-cpu
           path: artifact/windows-x86-cpu
 
       - name: "Download artifact (linux-x64-cpu)"
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: voicevox_core-java-linux-x64-cpu
           path: artifact/linux-x64-cpu
 
       - name: "Download artifact (linux-x64-gpu)"
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: voicevox_core-java-linux-x64-gpu
           path: artifact/linux-x64-gpu
 
       - name: "Download artifact (linux-arm64-cpu)"
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: voicevox_core-java-linux-arm64-cpu
           path: artifact/linux-arm64-cpu
 
       - name: "Download artifact (android-arm64-cpu)"
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: voicevox_core-java-android-arm64-cpu
           path: artifact/android-arm64-cpu
 
       - name: "Download artifact (android-x86_64-cpu)"
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: voicevox_core-java-android-x86_64-cpu
           path: artifact/android-x86_64-cpu
 
       - name: "Download artifact (osx-arm64-cpu)"
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: voicevox_core-java-osx-arm64-cpu
           path: artifact/osx-arm64-cpu
 
       - name: "Download artifact (osx-x64-cpu)"
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: voicevox_core-java-osx-x64-cpu
           path: artifact/osx-x64-cpu
