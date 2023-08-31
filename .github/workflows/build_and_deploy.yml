@@ -482,7 +482,7 @@ jobs:
           path: artifact/osx-x64-cpu
       - name: set cargo version
         run: |
-          cargo set-version "$VERSION" --exclude voicevox_core_python_api --exclude voicevox_core_java_api --exclude download --exclude xtask
+          cargo set-version "$VERSION" --exclude voicevox_core_python_api --exclude download --exclude xtask
       - name: copy dlls
         working-directory: crates/voicevox_core_java_api
         run: |
