@@ -314,6 +314,20 @@ jobs:
           cp -v README.md "artifact/${{ env.ASSET_NAME }}/README.txt"
           cp -vr model "artifact/${{ env.ASSET_NAME }}/"
           echo "${{ env.VERSION }}" > "artifact/${{ env.ASSET_NAME }}/VERSION"
+
+          case $RUNNER_OS
+          in
+            Linux)
+              JAVA_DLL_NAME="libvoicevox_core_java_api.so"
+              ;;
+            macOS)
+              JAVA_DLL_NAME="libvoicevox_core_java_api.dylib"
+              ;;
+            Windows)
+              JAVA_DLL_NAME="voicevox_core_java_api.dll"
+              ;;
+          esac
+          echo "JAVA_DLL_NAME=${JAVA_DLL_NAME}" >> "$GITHUB_ENV"
       - name: Code signing (Windows)
         if: startsWith(matrix.os, 'windows') && github.event.inputs.code_signing == 'true'
         run: |
@@ -332,7 +346,7 @@ jobs:
         uses: actions/upload-artifact@v2
         with:
           name: voicevox_core-java-${{ matrix.artifact_name }}
-          path: "target/${{ matrix.target }}/release/*voicevox_core_java_api.{dll,so,dylib}"
+          path: "target/${{ matrix.target }}/release/${{ env.JAVA_DLL_NAME }}"
       - name: Archive artifact
         run: |
           cd artifact
