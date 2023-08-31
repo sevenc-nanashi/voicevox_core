@@ -524,24 +524,24 @@ jobs:
       - name: build cpu version
         working-directory: crates/voicevox_core_java_api
         run: |
-          ./gradlew build
+          ./gradlew build --info
           mkdir -p "../../build"
-          cp ./lib/build/libs/lib-*.jar ../../build/voicevox_core_java_api-cpu.jar
+          mv ./lib/build/libs/lib-*.jar ../../build/voicevox_core_java_api-cpu.jar
       - name: build directml version
         working-directory: crates/voicevox_core_java_api
         run: |
           cp -v "../../artifact/windows-x64-directml/voicevox_core_java_api.dll" "./lib/src/main/resources/windows-x64/voicevox_core_java_api.dll"
 
-          ./gradlew build
-          cp ./lib/build/libs/lib-*.jar ../../build/voicevox_core_java_api-directml.jar
+          ./gradlew build --info
+          mv ./lib/build/libs/lib-*.jar ../../build/voicevox_core_java_api-directml.jar
       - name: build cuda version
         working-directory: crates/voicevox_core_java_api
         run: |
           cp -v "../../artifact/windows-x64-cuda/voicevox_core_java_api.dll" "./lib/src/main/resources/windows-x64/voicevox_core_java_api.dll"
           cp -v "../../artifact/linux-x64-gpu/libvoicevox_core_java_api.so" "./lib/src/main/resources/lib/linux-x64/libvoicevox_core_java_api.so"
 
-          ./gradlew build
-          cp ./lib/build/libs/lib-*.jar ../../build/voicevox_core_java_api-cuda.jar
+          ./gradlew build --info
+          mv ./lib/build/libs/lib-*.jar ../../build/voicevox_core_java_api-cuda.jar
       - name: Upload to Release
         if: env.VERSION != '0.0.0' && env.SKIP_UPLOADING_RELEASE_ASSET == '0'
         uses: softprops/action-gh-release@v1
