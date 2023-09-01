@@ -503,12 +503,11 @@ jobs:
           cargo set-version "$VERSION" --exclude voicevox_core_python_api --exclude download --exclude xtask
       - name: set environment variables for directory
         run: |
-          echo "JAVA_RESOURCES_DIR=$(realpath ./crates/voicevox_core_java_api/lib/src/main/resources" >> $GITHUB_ENV
-          echo "ARTIFACT_DIR=$(realpath ./artifact)" >> $GITHUB_ENV
+          echo "JAVA_RESOURCES_DIR=$(realpath ./crates/voicevox_core_java_api/lib/src/main/resources)" >> "$GITHUB_ENV"
+          echo "ARTIFACT_DIR=$(realpath ./artifact)" >> "$GITHUB_ENV"
       - name: copy dlls
         working-directory: crates/voicevox_core_java_api
         run: |
-          
           mkdir "$JAVA_RESOURCES_DIR/dll/windows-x64"
           mkdir "$JAVA_RESOURCES_DIR/dll/windows-x86"
           mkdir "$JAVA_RESOURCES_DIR/dll/linux-x64"
