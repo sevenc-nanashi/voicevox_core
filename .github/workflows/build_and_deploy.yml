@@ -501,26 +501,31 @@ jobs:
       - name: set cargo version
         run: |
           cargo set-version "$VERSION" --exclude voicevox_core_python_api --exclude download --exclude xtask
+      - name: set environment variables for directory
+        run: |
+          echo "JAVA_RESOURCES_DIR=$(realpath ./crates/voicevox_core_java_api/lib/src/main/resources" >> $GITHUB_ENV
+          echo "ARTIFACT_DIR=$(realpath ./artifact)" >> $GITHUB_ENV
       - name: copy dlls
         working-directory: crates/voicevox_core_java_api
         run: |
-          mkdir -p "./lib/src/main/resources/lib/windows-x64"
-          mkdir -p "./lib/src/main/resources/lib/windows-x86"
-          mkdir -p "./lib/src/main/resources/lib/linux-x64"
-          mkdir -p "./lib/src/main/resources/lib/linux-arm64"
-          mkdir -p "./lib/src/main/resources/lib/osx-x64"
-          mkdir -p "./lib/src/main/resources/lib/osx-arm64"
-          mkdir -p "./lib/src/main/resources/lib/osx-arm64"
-          mkdir -p "./lib/src/main/resources/jniLibs/arm64-v8a"
-          mkdir -p "./lib/src/main/resources/jniLibs/x86_64"
-          cp -v "../../artifact/windows-x64-cpu/voicevox_core_java_api.dll" "./lib/src/main/resources/lib/windows-x64/voicevox_core_java_api.dll"
-          cp -v "../../artifact/windows-x86-cpu/voicevox_core_java_api.dll" "./lib/src/main/resources/lib/windows-x86/voicevox_core_java_api.dll"
-          cp -v "../../artifact/linux-x64-cpu/libvoicevox_core_java_api.so" "./lib/src/main/resources/lib/linux-x64/libvoicevox_core_java_api.so"
-          cp -v "../../artifact/linux-arm64-cpu/libvoicevox_core_java_api.so" "./lib/src/main/resources/lib/linux-arm64/libvoicevox_core_java_api.so"
-          cp -v "../../artifact/osx-x64-cpu/libvoicevox_core_java_api.dylib" "./lib/src/main/resources/lib/osx-x64/libvoicevox_core_java_api.dylib"
-          cp -v "../../artifact/osx-arm64-cpu/libvoicevox_core_java_api.dylib" "./lib/src/main/resources/lib/osx-arm64/libvoicevox_core_java_api.dylib"
-          cp -v "../../artifact/android-arm64-cpu/libvoicevox_core_java_api.so" "./lib/src/main/resources/jniLibs/arm64-v8a/libvoicevox_core_java_api.so"
-          cp -v "../../artifact/android-x86_64-cpu/libvoicevox_core_java_api.so" "./lib/src/main/resources/jniLibs/x86_64/libvoicevox_core_java_api.so"
+          
+          mkdir "$JAVA_RESOURCES_DIR/dll/windows-x64"
+          mkdir "$JAVA_RESOURCES_DIR/dll/windows-x86"
+          mkdir "$JAVA_RESOURCES_DIR/dll/linux-x64"
+          mkdir "$JAVA_RESOURCES_DIR/dll/linux-arm64"
+          mkdir "$JAVA_RESOURCES_DIR/dll/osx-x64"
+          mkdir "$JAVA_RESOURCES_DIR/dll/osx-arm64"
+          mkdir "$JAVA_RESOURCES_DIR/dll/osx-arm64"
+          mkdir "$JAVA_RESOURCES_DIR/jniLibs/arm64-v8a"
+          mkdir "$JAVA_RESOURCES_DIR/jniLibs/x86_64"
+          cp -v "$ARTIFACT_DIR/windows-x64-cpu/voicevox_core_java_api.dll" "$JAVA_RESOURCES_DIR/dll/windows-x64/voicevox_core_java_api.dll"
+          cp -v "$ARTIFACT_DIR/windows-x86-cpu/voicevox_core_java_api.dll" "$JAVA_RESOURCES_DIR/dll/windows-x86/voicevox_core_java_api.dll"
+          cp -v "$ARTIFACT_DIR/linux-x64-cpu/libvoicevox_core_java_api.so" "$JAVA_RESOURCES_DIR/dll/linux-x64/libvoicevox_core_java_api.so"
+          cp -v "$ARTIFACT_DIR/linux-arm64-cpu/libvoicevox_core_java_api.so" "$JAVA_RESOURCES_DIR/dll/linux-arm64/libvoicevox_core_java_api.so"
+          cp -v "$ARTIFACT_DIR/osx-x64-cpu/libvoicevox_core_java_api.dylib" "$JAVA_RESOURCES_DIR/dll/osx-x64/libvoicevox_core_java_api.dylib"
+          cp -v "$ARTIFACT_DIR/osx-arm64-cpu/libvoicevox_core_java_api.dylib" "$JAVA_RESOURCES_DIR/dll/osx-arm64/libvoicevox_core_java_api.dylib"
+          cp -v "$ARTIFACT_DIR/android-arm64-cpu/libvoicevox_core_java_api.so" "$JAVA_RESOURCES_DIR/jniLibs/arm64-v8a/libvoicevox_core_java_api.so"
+          cp -v "$ARTIFACT_DIR/android-x86_64-cpu/libvoicevox_core_java_api.so" "$JAVA_RESOURCES_DIR/jniLibs/x86_64/libvoicevox_core_java_api.so"
       - name: build cpu version
         working-directory: crates/voicevox_core_java_api
         run: |
@@ -530,15 +535,15 @@ jobs:
       - name: build directml version
         working-directory: crates/voicevox_core_java_api
         run: |
-          cp -v "../../artifact/windows-x64-directml/voicevox_core_java_api.dll" "./lib/src/main/resources/windows-x64/voicevox_core_java_api.dll"
+          cp -v "$ARTIFACT_DIR/windows-x64-directml/voicevox_core_java_api.dll" "$JAVA_RESOURCES_DIR/dll/windows-x64/voicevox_core_java_api.dll"
 
           ./gradlew build --info
           cp ./lib/build/libs/lib-*.jar ../../build/voicevox_core_java_api-directml.jar
       - name: build cuda version
         working-directory: crates/voicevox_core_java_api
         run: |
-          cp -v "../../artifact/windows-x64-cuda/voicevox_core_java_api.dll" "./lib/src/main/resources/windows-x64/voicevox_core_java_api.dll"
-          cp -v "../../artifact/linux-x64-gpu/libvoicevox_core_java_api.so" "./lib/src/main/resources/lib/linux-x64/libvoicevox_core_java_api.so"
+          cp -v "$ARTIFACT_DIR/windows-x64-cuda/voicevox_core_java_api.dll" "$JAVA_RESOURCES_DIR/dll/windows-x64/voicevox_core_java_api.dll"
+          cp -v "$ARTIFACT_DIR/linux-x64-gpu/libvoicevox_core_java_api.so" "$JAVA_RESOURCES_DIR/dll/linux-x64/libvoicevox_core_java_api.so"
 
           ./gradlew build --info
           cp ./lib/build/libs/lib-*.jar ../../build/voicevox_core_java_api-cuda.jar
