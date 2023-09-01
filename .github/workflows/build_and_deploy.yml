@@ -256,6 +256,13 @@ jobs:
         run: |
           cargo set-version "$VERSION" --exclude voicevox_core_python_api --exclude download --exclude xtask
           if ${{ !!matrix.whl_local_version }}; then cargo set-version "$VERSION+"${{ matrix.whl_local_version }} -p voicevox_core_python_api; fi
+      - name: cache target
+        uses: actions/cache@v3
+        with:
+          path: ./target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
       - name: build voicevox_core_c_api
         shell: bash
         run: |
@@ -513,7 +520,6 @@ jobs:
           mkdir "$JAVA_RESOURCES_DIR/dll/linux-x64"
           mkdir "$JAVA_RESOURCES_DIR/dll/linux-arm64"
           mkdir "$JAVA_RESOURCES_DIR/dll/osx-x64"
-          mkdir "$JAVA_RESOURCES_DIR/dll/osx-arm64"
           mkdir "$JAVA_RESOURCES_DIR/dll/osx-arm64"
           mkdir "$JAVA_RESOURCES_DIR/jniLibs/arm64-v8a"
           mkdir "$JAVA_RESOURCES_DIR/jniLibs/x86_64"
