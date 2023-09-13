@@ -512,6 +512,7 @@ jobs:
         run: |
           echo "JAVA_RESOURCES_DIR=$(realpath ./crates/voicevox_core_java_api/lib/src/main/resources)" >> "$GITHUB_ENV"
           echo "ARTIFACT_DIR=$(realpath ./artifact)" >> "$GITHUB_ENV"
+          echo "ORT_DIR=$(realpath ./onnxruntime)" >> "$GITHUB_ENV"
       - name: copy dlls
         working-directory: crates/voicevox_core_java_api
         run: |
@@ -529,8 +530,36 @@ jobs:
           cp -v "$ARTIFACT_DIR/linux-arm64-cpu/libvoicevox_core_java_api.so" "$JAVA_RESOURCES_DIR/dll/linux-arm64/libvoicevox_core_java_api.so"
           cp -v "$ARTIFACT_DIR/osx-x64-cpu/libvoicevox_core_java_api.dylib" "$JAVA_RESOURCES_DIR/dll/osx-x64/libvoicevox_core_java_api.dylib"
           cp -v "$ARTIFACT_DIR/osx-arm64-cpu/libvoicevox_core_java_api.dylib" "$JAVA_RESOURCES_DIR/dll/osx-arm64/libvoicevox_core_java_api.dylib"
-          cp -v "$ARTIFACT_DIR/android-arm64-cpu/libvoicevox_core_java_api.so" "$JAVA_RESOURCES_DIR/jniLibs/arm64-v8a/libvoicevox_core_java_api.so"
-          cp -v "$ARTIFACT_DIR/android-x86_64-cpu/libvoicevox_core_java_api.so" "$JAVA_RESOURCES_DIR/jniLibs/x86_64/libvoicevox_core_java_api.so"
+      - name: copy onnxruntime
+        working-directory: crates/voicevox_core_java_api
+        run: |
+          curl -LfO https://github.com/microsoft/onnxruntime/releases/download/v1.14.0/onnxruntime-win-x64-1.14.0.zip
+          curl -LfO https://github.com/microsoft/onnxruntime/releases/download/v1.14.0/onnxruntime-win-x86-1.14.0.zip
+          curl -LfO https://github.com/microsoft/onnxruntime/releases/download/v1.14.0/onnxruntime-linux-aarch64-1.14.0.tgz
+          curl -LfO https://github.com/microsoft/onnxruntime/releases/download/v1.14.0/onnxruntime-linux-x64-1.14.0.tgz
+          curl -LfO https://github.com/microsoft/onnxruntime/releases/download/v1.14.0/onnxruntime-osx-arm64-1.14.0.tgz
+          curl -LfO https://github.com/microsoft/onnxruntime/releases/download/v1.14.0/onnxruntime-osx-x86_64-1.14.0.tgz
+
+          curl -LfO https://github.com/microsoft/onnxruntime/releases/download/v1.14.0/onnxruntime-win-x64-gpu-1.14.0.zip
+          curl -LfO https://github.com/microsoft/onnxruntime/releases/download/v1.14.0/onnxruntime-linux-x64-gpu-1.14.0.tgz
+
+          unzip -o onnxruntime-win-x64-1.14.0.zip -d "$ORT_DIR/"
+          unzip -o onnxruntime-win-x86-1.14.0.zip -d "$ORT_DIR/"
+          tar -xf onnxruntime-linux-aarch64-1.14.0.tgz -C "$ORT_DIR/"
+          tar -xf onnxruntime-linux-x64-1.14.0.tgz -C "$ORT_DIR/"
+          tar -xf onnxruntime-osx-arm64-1.14.0.tgz -C "$ORT_DIR/"
+          tar -xf onnxruntime-osx-x86_64-1.14.0.tgz -C "$ORT_DIR/"
+
+          unzip -o onnxruntime-win-x64-gpu-1.14.0.zip -d "$ORT_DIR/"
+          tar -xf onnxruntime-linux-x64-gpu-1.14.0.tgz -C "$ORT_DIR/"
+
+          cp -v "$ORT_DIR/onnxruntime-win-x64-1.14.0/lib/onnxruntime.dll" "$JAVA_RESOURCES_DIR/dll/windows-x64/onnxruntime.dll"
+          cp -v "$ORT_DIR/onnxruntime-win-x86-1.14.0/lib/onnxruntime.dll" "$JAVA_RESOURCES_DIR/dll/windows-x86/onnxruntime.dll"
+          cp -v "$ORT_DIR/onnxruntime-linux-aarch64-1.14.0/lib/libonnxruntime.so.1.14.0" "$JAVA_RESOURCES_DIR/dll/linux-arm64/libonnxruntime.so"
+          cp -v "$ORT_DIR/onnxruntime-linux-x64-1.14.0/lib/libonnxruntime.so.1.14.0" "$JAVA_RESOURCES_DIR/dll/linux-x64/libonnxruntime.so"
+          cp -v "$ORT_DIR/onnxruntime-osx-arm64-1.14.0/lib/libonnxruntime.1.14.0.dylib" "$JAVA_RESOURCES_DIR/dll/osx-arm64/libonnxruntime.dylib"
+          cp -v "$ORT_DIR/onnxruntime-osx-x86_64-1.14.0/lib/libonnxruntime.1.14.0.dylib" "$JAVA_RESOURCES_DIR/dll/osx-x64/libonnxruntime.dylib"
+
       - name: build cpu version
         working-directory: crates/voicevox_core_java_api
         run: |
@@ -550,8 +579,22 @@ jobs:
           cp -v "$ARTIFACT_DIR/windows-x64-cuda/voicevox_core_java_api.dll" "$JAVA_RESOURCES_DIR/dll/windows-x64/voicevox_core_java_api.dll"
           cp -v "$ARTIFACT_DIR/linux-x64-gpu/libvoicevox_core_java_api.so" "$JAVA_RESOURCES_DIR/dll/linux-x64/libvoicevox_core_java_api.so"
 
+          cp -v "$ARTIFACT_DIR/onnxruntime-win-x64-gpu-1.14.0/lib/onnxruntime_providers_shared.dll" "$JAVA_RESOURCES_DIR/dll/windows-x64/onnxruntime_providers_shared.dll"
+          cp -v "$ARTIFACT_DIR/onnxruntime-win-x64-gpu-1.14.0/lib/onnxruntime_providers_cuda.dll" "$JAVA_RESOURCES_DIR/dll/windows-x64/onnxruntime_providers_shared.dll"
+          cp -v "$ARTIFACT_DIR/onnxruntime-linux-x64-gpu-1.14.0/lib/libonnxruntime_providers_shared.so" "$JAVA_RESOURCES_DIR/dll/linux-x64/libonnxruntime_providers_shared.so"
+          cp -v "$ARTIFACT_DIR/onnxruntime-linux-x64-gpu-1.14.0/lib/libonnxruntime_providers_cuda.so" "$JAVA_RESOURCES_DIR/dll/linux-x64/libonnxruntime_providers_cuda.so"
+
           ./gradlew build --info -x test
           cp ./lib/build/libs/lib-*.jar ../../build/voicevox_core_java_api-$VERSION-cuda.jar
+      - name: build android version
+        working-directory: crates/voicevox_core_java_api
+        run: |
+          rm -rf "$JAVA_RESOURCES_DIR/dll"
+          cp -v "$ARTIFACT_DIR/android-arm64-cpu/libvoicevox_core_java_api.so" "$JAVA_RESOURCES_DIR/jniLibs/arm64-v8a/libvoicevox_core_java_api.so"
+          cp -v "$ARTIFACT_DIR/android-x86_64-cpu/libvoicevox_core_java_api.so" "$JAVA_RESOURCES_DIR/jniLibs/x86_64/libvoicevox_core_java_api.so"
+
+          ./gradlew build --info -x test
+          cp ./lib/build/libs/lib-*.jar ../../build/voicevox_core_java_api-$VERSION-android.jar
       - name: Upload to Release
         if: env.VERSION != '0.0.0' && env.SKIP_UPLOADING_RELEASE_ASSET == '0'
         uses: softprops/action-gh-release@v1
