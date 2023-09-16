@@ -14,9 +14,12 @@ use tracing::error;
 mod model_file;
 
 cfg_if! {
-    if #[cfg(not(feature="directml"))]{
+    if #[cfg(not(feature="directml", feature="coreml"))] {
         use onnxruntime::CudaProviderOptions;
+    } else if #[cfg(feature="coreml")] {
+        use onnxruntime::CoreMLProviderOptions;
     }
+
 }
 use std::collections::BTreeMap;
 
@@ -148,6 +151,9 @@ impl Status {
                         .with_disable_mem_pattern()?
                         .with_execution_mode(onnxruntime::ExecutionMode::ORT_SEQUENTIAL)?
                         .with_append_execution_provider_directml(0)?
+                } else if #[cfg(feature = "coreml")] {
+                    let options = CoreMlProviderOptions::default();
+                    session_builder.with_append_execution_provider_coreml(options)?
                 } else {
                     let options = CudaProviderOptions::default();
                     session_builder.with_append_execution_provider_cuda(options)?

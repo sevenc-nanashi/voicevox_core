@@ -5,7 +5,7 @@ use super::*;
 /// このライブラリで利用可能なデバイスの情報。
 ///
 /// あくまで本ライブラリが対応しているデバイスの情報であることに注意。GPUが使える環境ではなかったと
-/// しても`cuda`や`dml`は`true`を示しうる。
+/// しても`cuda`、`dml`、`coreml`が`true`になることがある。
 #[derive(Getters, Debug, Serialize, Deserialize)]
 pub struct SupportedDevices {
     /// CPUが利用可能。
@@ -26,6 +26,13 @@ pub struct SupportedDevices {
     ///
     /// [DirectML Execution Provider]: https://onnxruntime.ai/docs/execution-providers/DirectML-ExecutionProvider.html
     dml: bool,
+    /// CoreMLが利用可能。
+    ///
+    /// ONNX Runtimeの[CoreML Execution Provider] (`CoreMLExecutionProvider`)に対応する。必要な環境に
+    /// ついてはそちらを参照。
+    ///
+    /// [CoreML Execution Provider]: https://onnxruntime.ai/docs/execution-providers/CoreML-ExecutionProvider.html
+    coreml: bool,
 }
 
 impl SupportedDevices {
@@ -44,6 +51,7 @@ impl SupportedDevices {
     pub fn create() -> Result<Self> {
         let mut cuda_support = false;
         let mut dml_support = false;
+        let mut coreml_support = false;
         for provider in onnxruntime::session::get_available_providers()
             .map_err(|e| ErrorRepr::GetSupportedDevices(e.into()))?
             .iter()
@@ -51,6 +59,7 @@ impl SupportedDevices {
             match provider.as_str() {
                 "CUDAExecutionProvider" => cuda_support = true,
                 "DmlExecutionProvider" => dml_support = true,
+                "CoreMlExecutionProvider" => coreml_support = true,
                 _ => {}
             }
         }
@@ -59,6 +68,7 @@ impl SupportedDevices {
             cpu: true,
             cuda: cuda_support,
             dml: dml_support,
+            coreml: coreml_support,
         })
     }
 

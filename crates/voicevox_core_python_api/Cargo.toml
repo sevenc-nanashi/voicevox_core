@@ -13,6 +13,7 @@ crate-type = ["cdylib"]
 
 [features]
 directml = ["voicevox_core/directml"]
+coreml = ["voicevox_core/coreml"]
 
 [dependencies]
 easy-ext.workspace = true
