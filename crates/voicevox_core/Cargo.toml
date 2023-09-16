@@ -37,6 +37,7 @@ uuid.workspace = true
 
 [dependencies.onnxruntime]
 git = "https://github.com/sevenc-nanashi/onnxruntime-rs.git"
+branch = "add/coreml"
 # rev = "ebb9dcb9b26ee681889b52b6db3b4f642b04a250"
 
 [dependencies.open_jtalk]
