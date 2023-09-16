@@ -136,7 +136,7 @@ jobs:
               "artifact_name": "osx-arm64-cpu",
               "whl_local_version": "cpu",
               "use_cuda": false,
-              "can_skip_in_simple_test": false
+              "can_skip_in_simple_test": true
             },
             {
               "os": "macos-11",
@@ -166,6 +166,48 @@ jobs:
             {
               "os": "macos-12",
               "features": "",
+              "target": "x86_64-apple-ios",
+              "artifact_name": "ios-x64-cpu",
+              "use_cuda": false,
+              "can_skip_in_simple_test": true
+            },
+            {
+              "os": "macos-11",
+              "features": "coreml",
+              "target": "aarch64-apple-darwin",
+              "artifact_name": "osx-arm64-cpu",
+              "whl_local_version": "coreml",
+              "use_cuda": false,
+              "can_skip_in_simple_test": false
+            },
+            {
+              "os": "macos-11",
+              "features": "coreml",
+              "target": "x86_64-apple-darwin",
+              "artifact_name": "osx-x64-cpu",
+              "whl_local_version": "coreml",
+              "use_cuda": false,
+              "can_skip_in_simple_test": true
+            },
+            {
+              "os": "macos-12",
+              "features": "coreml",
+              "target": "aarch64-apple-ios",
+              "artifact_name": "ios-arm64-cpu",
+              "use_cuda": false,
+              "can_skip_in_simple_test": true
+            },
+            {
+              "os": "macos-12",
+              "features": "coreml",
+              "target": "aarch64-apple-ios-sim",
+              "artifact_name": "ios-arm64-cpu-sim",
+              "use_cuda": false,
+              "can_skip_in_simple_test": true
+            },
+            {
+              "os": "macos-12",
+              "features": "coreml",
               "target": "x86_64-apple-ios",
               "artifact_name": "ios-x64-cpu",
               "use_cuda": false,
