@@ -298,6 +298,13 @@ jobs:
         run: |
           cargo set-version "$VERSION" --exclude voicevox_core_python_api --exclude download --exclude xtask
           if ${{ !!matrix.whl_local_version }}; then cargo set-version "$VERSION+"${{ matrix.whl_local_version }} -p voicevox_core_python_api; fi
+      - name: Cache target
+        uses: actions/cache@v3
+        with:
+          path: ~/.cargo
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
       - name: build voicevox_core_c_api
         shell: bash
         run: |
