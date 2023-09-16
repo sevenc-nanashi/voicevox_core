@@ -14,7 +14,7 @@ use tracing::error;
 mod model_file;
 
 cfg_if! {
-    if #[cfg(not(feature="directml", feature="coreml"))] {
+    if #[cfg(not(feature="directml"))] && #[cfg(not(feature="coreml"))] {
         use onnxruntime::CudaProviderOptions;
     } else if #[cfg(feature="coreml")] {
         use onnxruntime::CoreMLProviderOptions;
