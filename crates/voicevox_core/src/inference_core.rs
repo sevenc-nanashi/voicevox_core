@@ -22,8 +22,10 @@ impl InferenceCore {
         let supported_devices = SupportedDevices::create()?;
 
         cfg_if! {
-            if #[cfg(feature = "directml")]{
+            if #[cfg(feature = "directml")] {
                 Ok(*supported_devices.dml())
+            } #[cfg(feature = "coreml")] {
+                Ok(*supported_devices.coreml())
             } else{
                 Ok(*supported_devices.cuda())
             }
