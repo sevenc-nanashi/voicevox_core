@@ -37,7 +37,7 @@ uuid.workspace = true
 
 [dependencies.onnxruntime]
 git = "https://github.com/sevenc-nanashi/onnxruntime-rs.git"
-rev = "d7986647529d96d349878c188f801c9ec75890ba"
+rev = "3da6bcb8a5f3e86ea425f7090e05295db56d3f9a"
 
 [dependencies.open_jtalk]
 git = "https://github.com/VOICEVOX/open_jtalk-rs.git"

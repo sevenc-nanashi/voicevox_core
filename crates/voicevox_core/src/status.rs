@@ -15,7 +15,7 @@ mod model_file;
 
 cfg_if! {
     if #[cfg(feature="coreml")] {
-        use onnxruntime::CoreMlProviderOptions;
+        use onnxruntime::CoreMLProviderOptions;
     } else if #[cfg(not(feature="directml"))] {
         use onnxruntime::CudaProviderOptions;
     }
@@ -152,7 +152,7 @@ impl Status {
                         .with_execution_mode(onnxruntime::ExecutionMode::ORT_SEQUENTIAL)?
                         .with_append_execution_provider_directml(0)?
                 } else if #[cfg(feature = "coreml")] {
-                    let options = CoreMlProviderOptions::default();
+                    let options = CoreMLProviderOptions::default();
                     session_builder.with_append_execution_provider_coreml(options)?
                 } else {
                     let options = CudaProviderOptions::default();

@@ -59,7 +59,7 @@ impl SupportedDevices {
             match provider.as_str() {
                 "CUDAExecutionProvider" => cuda_support = true,
                 "DmlExecutionProvider" => dml_support = true,
-                "CoreMlExecutionProvider" => coreml_support = true,
+                "CoreMLExecutionProvider" => coreml_support = true,
                 _ => {}
             }
         }
