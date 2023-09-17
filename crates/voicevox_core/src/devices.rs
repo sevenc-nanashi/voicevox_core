@@ -26,6 +26,13 @@ pub struct SupportedDevices {
     ///
     /// [DirectML Execution Provider]: https://onnxruntime.ai/docs/execution-providers/DirectML-ExecutionProvider.html
     dml: bool,
+    /// NNAPIが利用可能。
+    ///
+    /// ONNX Runtimeの[NNAPI Execution Provider] (`NnapiExecutionProvider`)に対応する。必要な環境に
+    /// ついてはそちらを参照。
+    ///
+    /// [NNAPI Execution Provider]: https://onnxruntime.ai/docs/execution-providers/NNAPI-ExecutionProvider.html
+    nnapi: bool,
 }
 
 impl SupportedDevices {
@@ -44,6 +51,7 @@ impl SupportedDevices {
     pub fn create() -> Result<Self> {
         let mut cuda_support = false;
         let mut dml_support = false;
+        let mut nnapi_support = false;
         for provider in onnxruntime::session::get_available_providers()
             .map_err(|e| ErrorRepr::GetSupportedDevices(e.into()))?
             .iter()
@@ -51,6 +59,7 @@ impl SupportedDevices {
             match provider.as_str() {
                 "CUDAExecutionProvider" => cuda_support = true,
                 "DmlExecutionProvider" => dml_support = true,
+                "NnapiExecutionProvider" => nnapi_support = true,
                 _ => {}
             }
         }
@@ -59,6 +68,7 @@ impl SupportedDevices {
             cpu: true,
             cuda: cuda_support,
             dml: dml_support,
+            nnapi: nnapi_support,
         })
     }
 

@@ -14,7 +14,9 @@ use tracing::error;
 mod model_file;
 
 cfg_if! {
-    if #[cfg(not(feature="directml"))]{
+    if #[cfg(feature="nnapi")] {
+        use onnxruntime::NnapiProviderOptions;
+    } else if #[cfg(not(feature="directml"))] {
         use onnxruntime::CudaProviderOptions;
     }
 }
@@ -143,11 +145,14 @@ impl Status {
 
         let session_builder = if *session_options.use_gpu() {
             cfg_if! {
-                if #[cfg(feature = "directml")]{
+                if #[cfg(feature = "directml")] {
                     session_builder
                         .with_disable_mem_pattern()?
                         .with_execution_mode(onnxruntime::ExecutionMode::ORT_SEQUENTIAL)?
                         .with_append_execution_provider_directml(0)?
+                } else if #[cfg(feature = "nnapi")] {
+                    let options = NnapiProviderOptions::default();
+                    session_builder.with_append_execution_provider_nnapi(&options)?
                 } else {
                     let options = CudaProviderOptions::default();
                     session_builder.with_append_execution_provider_cuda(options)?

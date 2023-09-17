@@ -140,9 +140,10 @@ impl Synthesizer {
                 let supported_devices = SupportedDevices::create()?;
 
                 cfg_if! {
-                    if #[cfg(feature="directml")]{
+                    if #[cfg(feature="directml")] {
                         *supported_devices.dml()
-
+                    } else if #[cfg(feature="nnapi")] {
+                        *supported_devices.nnapi()
                     } else {
                         *supported_devices.cuda()
                     }

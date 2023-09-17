@@ -7,6 +7,7 @@ publish.workspace = true
 [features]
 default = []
 directml = ["onnxruntime/directml"]
+nnapi = ["onnxruntime/nnapi"]
 
 [dependencies]
 anyhow.workspace = true
@@ -35,8 +36,8 @@ tracing.workspace = true
 uuid.workspace = true
 
 [dependencies.onnxruntime]
-git = "https://github.com/VOICEVOX/onnxruntime-rs.git"
-rev = "ebb9dcb9b26ee681889b52b6db3b4f642b04a250"
+git = "https://github.com/sevenc-nanashi/onnxruntime-rs.git"
+rev = "c92be02d675b53d48ea77bd52bd6074dd770494a"
 
 [dependencies.open_jtalk]
 git = "https://github.com/VOICEVOX/open_jtalk-rs.git"
