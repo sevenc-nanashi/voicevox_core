@@ -188,30 +188,6 @@ jobs:
               "whl_local_version": "coreml",
               "use_cuda": false,
               "can_skip_in_simple_test": true
-            },
-            {
-              "os": "macos-12",
-              "features": "coreml",
-              "target": "aarch64-apple-ios",
-              "artifact_name": "ios-arm64-cpu",
-              "use_cuda": false,
-              "can_skip_in_simple_test": true
-            },
-            {
-              "os": "macos-12",
-              "features": "coreml",
-              "target": "aarch64-apple-ios-sim",
-              "artifact_name": "ios-arm64-cpu-sim",
-              "use_cuda": false,
-              "can_skip_in_simple_test": true
-            },
-            {
-              "os": "macos-12",
-              "features": "coreml",
-              "target": "x86_64-apple-ios",
-              "artifact_name": "ios-x64-cpu",
-              "use_cuda": false,
-              "can_skip_in_simple_test": true
             }
           ]'
 
