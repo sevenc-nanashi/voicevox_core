@@ -24,7 +24,7 @@ impl InferenceCore {
         cfg_if! {
             if #[cfg(feature = "directml")] {
                 Ok(*supported_devices.dml())
-            } #[cfg(feature = "coreml")] {
+            } else if #[cfg(feature = "coreml")] {
                 Ok(*supported_devices.coreml())
             } else{
                 Ok(*supported_devices.cuda())
