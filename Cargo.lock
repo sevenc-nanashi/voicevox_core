@@ -2343,7 +2343,7 @@ checksum = "dd8b5dd2ae5ed71462c540258bedcb51965123ad7e7ccf4b9a8cafaa4a63576d"
 [[package]]
 name = "onnxruntime"
 version = "0.1.0"
-source = "git+https://github.com/sevenc-nanashi/onnxruntime-rs.git?rev=d7986647529d96d349878c188f801c9ec75890ba#d7986647529d96d349878c188f801c9ec75890ba"
+source = "git+https://github.com/sevenc-nanashi/onnxruntime-rs.git?rev=7bab6f7#7bab6f74355ae0dbfb158ad41208c5847bcbb52a"
 dependencies = [
  "lazy_static",
  "ndarray",
@@ -2355,7 +2355,7 @@ dependencies = [
 [[package]]
 name = "onnxruntime-sys"
 version = "0.0.25"
-source = "git+https://github.com/sevenc-nanashi/onnxruntime-rs.git?rev=d7986647529d96d349878c188f801c9ec75890ba#d7986647529d96d349878c188f801c9ec75890ba"
+source = "git+https://github.com/sevenc-nanashi/onnxruntime-rs.git?rev=7bab6f7#7bab6f74355ae0dbfb158ad41208c5847bcbb52a"
 dependencies = [
  "flate2",
  "once_cell",
