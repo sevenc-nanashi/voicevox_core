@@ -1,15 +1,16 @@
+use std::sync::Arc;
 use std::{fmt::Debug, vec};
 
 use anyhow::anyhow;
 use duplicate::duplicate_item;
 use ndarray::{Array, Dimension};
 use once_cell::sync::Lazy;
-use onnxruntime::{
-    environment::Environment, GraphOptimizationLevel, LoggingLevel, TensorElementDataType,
-    TypeToTensorElementDataType,
+use ort::{
+    environment::Environment, tensor::TensorElementDataType, ExecutionProvider,
+    GraphOptimizationLevel, LoggingLevel, SessionBuilder, Value,
 };
 
-use crate::{devices::SupportedDevices, error::ErrorRepr};
+use crate::devices::SupportedDevices;
 
 use self::assert_send::AssertSend;
 
@@ -22,28 +23,14 @@ use super::super::{
 pub(crate) enum Onnxruntime {}
 
 impl InferenceRuntime for Onnxruntime {
-    type Session = AssertSend<onnxruntime::session::Session<'static>>;
-    type RunContext<'a> = OnnxruntimeRunContext<'a>;
+    type Session = AssertSend<ort::session::InMemorySession<'static>>;
+    type RunContext<'a> = OnnxruntimeRunContext<'static>;
 
     fn supported_devices() -> crate::Result<SupportedDevices> {
-        let mut cuda_support = false;
-        let mut dml_support = false;
-        for provider in onnxruntime::session::get_available_providers()
-            .map_err(Into::into)
-            .map_err(ErrorRepr::GetSupportedDevices)?
-            .iter()
-        {
-            match provider.as_str() {
-                "CUDAExecutionProvider" => cuda_support = true,
-                "DmlExecutionProvider" => dml_support = true,
-                _ => {}
-            }
-        }
-
         Ok(SupportedDevices {
             cpu: true,
-            cuda: cuda_support,
-            dml: dml_support,
+            cuda: ExecutionProvider::CUDA(Default::default()).is_available(),
+            dml: ExecutionProvider::DirectML(Default::default()).is_available(),
         })
     }
 
@@ -55,16 +42,19 @@ impl InferenceRuntime for Onnxruntime {
         Vec<ParamInfo<InputScalarKind>>,
         Vec<ParamInfo<OutputScalarKind>>,
     )> {
-        let mut builder = ENVIRONMENT
-            .new_session_builder()?
-            .with_optimization_level(GraphOptimizationLevel::Basic)?
-            .with_intra_op_num_threads(options.cpu_num_threads.into())?
-            .with_inter_op_num_threads(options.cpu_num_threads.into())?;
+        let cpu_num_threads: i16 = options
+            .cpu_num_threads
+            .try_into()
+            .map_err(|_| anyhow!("cpu_num_threads must be in range `i16`"))?;
+        let mut builder = SessionBuilder::new(&ENVIRONMENT)?
+            .with_optimization_level(GraphOptimizationLevel::Level1)?
+            .with_intra_threads(cpu_num_threads)?
+            .with_inter_threads(cpu_num_threads)?;
 
         if options.use_gpu {
             #[cfg(feature = "directml")]
             {
-                use onnxruntime::ExecutionMode;
+                use ort::ExecutionMode;
 
                 builder = builder
                     .with_disable_mem_pattern()?
@@ -74,19 +64,20 @@ impl InferenceRuntime for Onnxruntime {
 
             #[cfg(not(feature = "directml"))]
             {
-                builder = builder.with_append_execution_provider_cuda(Default::default())?;
+                builder = builder.with_execution_providers([])?;
             }
         }
 
         let model = model()?;
-        let sess = AssertSend::from(builder.with_model_from_memory(model)?);
+        let sess = AssertSend::from(builder.with_model_from_memory(&model)?);
 
         let input_param_infos = sess
             .inputs
             .iter()
             .map(|info| {
                 let dt = match info.input_type {
-                    TensorElementDataType::Float => Ok(InputScalarKind::Float32),
+                    TensorElementDataType::Float32 => Ok(InputScalarKind::Float32),
+                    TensorElementDataType::Float64 => Err("ONNX_TENSOR_ELEMENT_DATA_TYPE_DOUBLE"),
                     TensorElementDataType::Uint8 => Err("ONNX_TENSOR_ELEMENT_DATA_TYPE_UINT8"),
                     TensorElementDataType::Int8 => Err("ONNX_TENSOR_ELEMENT_DATA_TYPE_INT8"),
                     TensorElementDataType::Uint16 => Err("ONNX_TENSOR_ELEMENT_DATA_TYPE_UINT16"),
@@ -94,9 +85,13 @@ impl InferenceRuntime for Onnxruntime {
                     TensorElementDataType::Int32 => Err("ONNX_TENSOR_ELEMENT_DATA_TYPE_INT32"),
                     TensorElementDataType::Int64 => Ok(InputScalarKind::Int64),
                     TensorElementDataType::String => Err("ONNX_TENSOR_ELEMENT_DATA_TYPE_STRING"),
-                    TensorElementDataType::Double => Err("ONNX_TENSOR_ELEMENT_DATA_TYPE_DOUBLE"),
                     TensorElementDataType::Uint32 => Err("ONNX_TENSOR_ELEMENT_DATA_TYPE_UINT32"),
                     TensorElementDataType::Uint64 => Err("ONNX_TENSOR_ELEMENT_DATA_TYPE_UINT64"),
+                    TensorElementDataType::Bool => Err("ONNX_TENSOR_ELEMENT_DATA_TYPE_BOOL"),
+                    TensorElementDataType::Float16 => Err("ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT16"),
+                    TensorElementDataType::Bfloat16 => {
+                        Err("ONNX_TENSOR_ELEMENT_DATA_TYPE_BFLOAT16")
+                    }
                 }
                 .map_err(|actual| {
                     anyhow!("unsupported input datatype `{actual}` for `{}`", info.name)
@@ -115,7 +110,8 @@ impl InferenceRuntime for Onnxruntime {
             .iter()
             .map(|info| {
                 let dt = match info.output_type {
-                    TensorElementDataType::Float => Ok(OutputScalarKind::Float32),
+                    TensorElementDataType::Float32 => Ok(OutputScalarKind::Float32),
+                    TensorElementDataType::Float64 => Err("ONNX_TENSOR_ELEMENT_DATA_TYPE_DOUBLE"),
                     TensorElementDataType::Uint8 => Err("ONNX_TENSOR_ELEMENT_DATA_TYPE_UINT8"),
                     TensorElementDataType::Int8 => Err("ONNX_TENSOR_ELEMENT_DATA_TYPE_INT8"),
                     TensorElementDataType::Uint16 => Err("ONNX_TENSOR_ELEMENT_DATA_TYPE_UINT16"),
@@ -123,9 +119,13 @@ impl InferenceRuntime for Onnxruntime {
                     TensorElementDataType::Int32 => Err("ONNX_TENSOR_ELEMENT_DATA_TYPE_INT32"),
                     TensorElementDataType::Int64 => Err("ONNX_TENSOR_ELEMENT_DATA_TYPE_INT64"),
                     TensorElementDataType::String => Err("ONNX_TENSOR_ELEMENT_DATA_TYPE_STRING"),
-                    TensorElementDataType::Double => Err("ONNX_TENSOR_ELEMENT_DATA_TYPE_DOUBLE"),
                     TensorElementDataType::Uint32 => Err("ONNX_TENSOR_ELEMENT_DATA_TYPE_UINT32"),
                     TensorElementDataType::Uint64 => Err("ONNX_TENSOR_ELEMENT_DATA_TYPE_UINT64"),
+                    TensorElementDataType::Bool => Err("ONNX_TENSOR_ELEMENT_DATA_TYPE_BOOL"),
+                    TensorElementDataType::Float16 => Err("ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT16"),
+                    TensorElementDataType::Bfloat16 => {
+                        Err("ONNX_TENSOR_ELEMENT_DATA_TYPE_BFLOAT16")
+                    }
                 }
                 .map_err(|actual| {
                     anyhow!("unsupported output datatype `{actual}` for `{}`", info.name)
@@ -141,12 +141,13 @@ impl InferenceRuntime for Onnxruntime {
 
         return Ok((sess, input_param_infos, output_param_infos));
 
-        static ENVIRONMENT: Lazy<Environment> = Lazy::new(|| {
+        static ENVIRONMENT: Lazy<Arc<Environment>> = Lazy::new(|| {
             Environment::builder()
                 .with_name(env!("CARGO_PKG_NAME"))
                 .with_log_level(LOGGING_LEVEL)
                 .build()
                 .unwrap()
+                .into_arc()
         });
 
         const LOGGING_LEVEL: LoggingLevel = if cfg!(debug_assertions) {
@@ -166,41 +167,31 @@ impl InferenceRuntime for Onnxruntime {
         if !sess
             .outputs
             .iter()
-            .all(|info| matches!(info.output_type, TensorElementDataType::Float))
+            .all(|info| matches!(info.output_type, TensorElementDataType::Float32))
         {
             unimplemented!(
                 "currently only `ONNX_TENSOR_ELEMENT_DATA_TYPE_FLOAT` is supported for output",
             );
         }
 
-        let outputs = sess.run::<f32>(inputs.iter_mut().map(|t| &mut **t as &mut _).collect())?;
+        let outputs = sess.run(inputs)?;
 
         Ok(outputs
             .iter()
-            .map(|o| OutputTensor::Float32((*o).clone().into_owned()))
+            .map(|o| OutputTensor::Float32((*(*o).try_extract().unwrap().view()).to_owned()))
             .collect())
     }
 }
 
 pub(crate) struct OnnxruntimeRunContext<'sess> {
-    sess: &'sess mut AssertSend<onnxruntime::session::Session<'static>>,
-    inputs: Vec<Box<dyn onnxruntime::session::AnyArray>>,
+    sess: &'sess mut AssertSend<ort::session::InMemorySession<'sess>>,
+    inputs: Vec<Value<'sess>>,
 }
 
-impl OnnxruntimeRunContext<'_> {
-    fn push_input(
-        &mut self,
-        input: Array<impl TypeToTensorElementDataType + Debug + 'static, impl Dimension + 'static>,
-    ) {
-        self.inputs
-            .push(Box::new(onnxruntime::session::NdArray::new(input)));
-    }
-}
-
-impl<'sess> From<&'sess mut AssertSend<onnxruntime::session::Session<'static>>>
+impl<'sess> From<&mut AssertSend<ort::session::InMemorySession<'sess>>>
     for OnnxruntimeRunContext<'sess>
 {
-    fn from(sess: &'sess mut AssertSend<onnxruntime::session::Session<'static>>) -> Self {
+    fn from(sess: &mut AssertSend<ort::session::InMemorySession<'sess>>) -> Self {
         Self {
             sess,
             inputs: vec![],
@@ -215,7 +206,8 @@ impl PushInputTensor for OnnxruntimeRunContext<'_> {
         [ push_float32 ] [ f32 ];
     )]
     fn method(&mut self, tensor: Array<T, impl Dimension + 'static>) {
-        self.push_input(tensor);
+        self.inputs
+            .push(Value::from_array(self.sess.allocator(), &tensor.into_dyn().into()).unwrap());
     }
 }
 
@@ -226,10 +218,8 @@ mod assert_send {
 
     pub(crate) struct AssertSend<T>(T);
 
-    impl From<onnxruntime::session::Session<'static>>
-        for AssertSend<onnxruntime::session::Session<'static>>
-    {
-        fn from(session: onnxruntime::session::Session<'static>) -> Self {
+    impl<'s> From<ort::session::InMemorySession<'s>> for AssertSend<ort::session::InMemorySession<'s>> {
+        fn from(session: ort::session::InMemorySession<'s>) -> Self {
             Self(session)
         }
     }
