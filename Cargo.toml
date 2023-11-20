@@ -8,7 +8,7 @@ async_zip = { version = "0.0.11", features = ["full"] }
 clap = { version = "4.0.10", features = ["derive"] }
 derive_more = "0.99.17"
 easy-ext = "1.0.1"
-fs-err = { version = "2.9.0", features = ["tokio"] }
+fs-err = { version = "2.9.0" }
 futures = "0.3.26"
 indexmap = { version = "2.0.0", features = ["serde"] }
 itertools = "0.10.5"
@@ -26,7 +26,7 @@ tracing = { version = "0.1.37", features = ["log"] }
 tracing-subscriber = { version = "0.3.16", features = ["env-filter"] }
 uuid = { version = "1.4.0", features = ["v4", "serde"] }
 voicevox_core = { path = "crates/voicevox_core" }
-tokio = { version = "1.25.0", features = ["rt", "rt-multi-thread", "macros", "sync"] }
+tokio = { version = "1.25.0", features = ["rt", "macros", "sync"] }
 derive-getters = "0.2.0"
 
 [workspace.package]

@@ -1,7 +1,8 @@
-use async_zip::{read::fs::ZipFileReader, ZipEntry};
 use enum_map::EnumMap;
 use futures::future::join3;
 use serde::{de::DeserializeOwned, Deserialize};
+use std::io::Read;
+use zip::{read::ZipFile, ZipArchive};
 
 use super::*;
 use crate::infer::domain::InferenceOperationImpl;
@@ -41,24 +42,27 @@ impl VoiceModel {
     pub(crate) async fn read_inference_models(
         &self,
     ) -> LoadModelResult<EnumMap<InferenceOperationImpl, Vec<u8>>> {
-        let reader = VvmEntryReader::open(&self.path).await?;
-        let (decode_model_result, predict_duration_model_result, predict_intonation_model_result) =
-            join3(
-                reader.read_vvm_entry(self.manifest.decode_filename()),
-                reader.read_vvm_entry(self.manifest.predict_duration_filename()),
-                reader.read_vvm_entry(self.manifest.predict_intonation_filename()),
-            )
-            .await;
+        let mut reader = VvmEntryReader::open(&self.path).await?;
+
+        let predict_duration_model_result = reader
+            .read_vvm_entry(self.manifest.predict_duration_filename())
+            .await?;
+        let predict_intonation_model_result = reader
+            .read_vvm_entry(self.manifest.predict_intonation_filename())
+            .await?;
+        let decode_model_result = reader
+            .read_vvm_entry(self.manifest.decode_filename())
+            .await?;
 
         Ok(EnumMap::from_array([
-            predict_duration_model_result?,
-            predict_intonation_model_result?,
-            decode_model_result?,
+            predict_duration_model_result,
+            predict_intonation_model_result,
+            decode_model_result,
         ]))
     }
     /// VVMファイルから`VoiceModel`をコンストラクトする。
     pub async fn from_path(path: impl AsRef<Path>) -> Result<Self> {
-        let reader = VvmEntryReader::open(path.as_ref()).await?;
+        let mut reader = VvmEntryReader::open(path.as_ref()).await?;
         let manifest = reader.read_vvm_json::<Manifest>("manifest.json").await?;
         let metas = reader
             .read_vvm_json::<VoiceModelMeta>(manifest.metas_filename())
@@ -94,48 +98,35 @@ impl VoiceModel {
     }
 }
 
-struct VvmEntry {
+struct VvmEntry<'a> {
     index: usize,
-    entry: ZipEntry,
+    entry: ZipFile<'a>,
 }
 
 #[derive(new)]
 struct VvmEntryReader {
-    reader: ZipFileReader,
-    entry_map: HashMap<String, VvmEntry>,
+    reader: ZipArchive<std::io::Cursor<Vec<u8>>>,
+    path: PathBuf,
 }
 
 impl VvmEntryReader {
     async fn open(path: &Path) -> LoadModelResult<Self> {
-        let reader = ZipFileReader::new(path)
-            .await
-            .map_err(|source| LoadModelError {
-                path: path.to_owned(),
-                context: LoadModelErrorKind::OpenZipFile,
-                source: Some(source.into()),
-            })?;
-        let entry_map: HashMap<_, _> = reader
-            .file()
-            .entries()
-            .iter()
-            .filter(|e| !e.entry().dir())
-            .enumerate()
-            .map(|(i, e)| {
-                (
-                    e.entry().filename().to_string(),
-                    VvmEntry {
-                        index: i,
-                        entry: e.entry().clone(),
-                    },
-                )
-            })
-            .collect();
-        Ok(VvmEntryReader::new(reader, entry_map))
+        let file = std::fs::read(path).map_err(|source| LoadModelError {
+            path: path.to_owned(),
+            context: LoadModelErrorKind::OpenZipFile,
+            source: Some(source.into()),
+        })?;
+        let reader = ZipArchive::new(io::Cursor::new(file)).map_err(|source| LoadModelError {
+            path: path.to_owned(),
+            context: LoadModelErrorKind::OpenZipFile,
+            source: Some(source.into()),
+        })?;
+        Ok(VvmEntryReader::new(reader, path.to_owned()))
     }
-    async fn read_vvm_json<T: DeserializeOwned>(&self, filename: &str) -> LoadModelResult<T> {
+    async fn read_vvm_json<T: DeserializeOwned>(&mut self, filename: &str) -> LoadModelResult<T> {
         let bytes = self.read_vvm_entry(filename).await?;
         serde_json::from_slice(&bytes).map_err(|source| LoadModelError {
-            path: self.reader.path().to_owned(),
+            path: self.path.to_owned(),
             context: LoadModelErrorKind::ReadZipEntry {
                 filename: filename.to_owned(),
             },
@@ -143,22 +134,34 @@ impl VvmEntryReader {
         })
     }
 
-    async fn read_vvm_entry(&self, filename: &str) -> LoadModelResult<Vec<u8>> {
+    async fn read_vvm_entry(&mut self, filename: &str) -> LoadModelResult<Vec<u8>> {
         async {
-            let me = self
-                .entry_map
-                .get(filename)
-                .ok_or_else(|| io::Error::from(io::ErrorKind::NotFound))?;
-            let mut manifest_reader = self.reader.entry(me.index).await?;
-            let mut buf = Vec::with_capacity(me.entry.uncompressed_size() as usize);
-            manifest_reader
-                .read_to_end_checked(&mut buf, &me.entry)
-                .await?;
+            let mut zip_file: Option<usize> = None;
+            for i in 0..self.reader.len() {
+                let entry = self.reader.by_index(i)?;
+                if entry.name() == filename {
+                    zip_file = Some(i);
+                    break;
+                }
+            }
+
+            let mut zip_file = self
+                .reader
+                .by_index(zip_file.ok_or_else(|| LoadModelError {
+                    path: self.path.to_owned(),
+                    context: LoadModelErrorKind::ReadZipEntry {
+                        filename: filename.to_owned(),
+                    },
+                    source: None,
+                })?)?;
+
+            let mut buf = Vec::with_capacity(zip_file.size() as usize);
+            zip_file.read_to_end(&mut buf)?;
             Ok::<_, anyhow::Error>(buf)
         }
         .await
         .map_err(|source| LoadModelError {
-            path: self.reader.path().to_owned(),
+            path: self.path.to_owned(),
             context: LoadModelErrorKind::ReadZipEntry {
                 filename: filename.to_owned(),
             },
