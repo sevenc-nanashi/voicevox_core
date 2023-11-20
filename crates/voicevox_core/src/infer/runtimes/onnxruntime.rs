@@ -1,3 +1,5 @@
+use std::any::Any;
+use std::mem::ManuallyDrop;
 use std::sync::Arc;
 use std::{fmt::Debug, vec};
 
@@ -23,8 +25,8 @@ use super::super::{
 pub(crate) enum Onnxruntime {}
 
 impl InferenceRuntime for Onnxruntime {
-    type Session = AssertSend<ort::session::InMemorySession<'static>>;
-    type RunContext<'a> = OnnxruntimeRunContext<'static>;
+    type Session = OnnxruntimeSession;
+    type RunContext<'a> = OnnxruntimeRunContext<'a>;
 
     fn supported_devices() -> crate::Result<SupportedDevices> {
         Ok(SupportedDevices {
@@ -69,7 +71,10 @@ impl InferenceRuntime for Onnxruntime {
         }
 
         let model = model()?;
-        let sess = AssertSend::from(builder.with_model_from_memory(&model)?);
+        let model = model.into_boxed_slice();
+        let model = Box::leak(model);
+        let model_ptr = model as *mut [u8];
+        let sess = AssertSend::from(builder.with_model_from_memory(model)?);
 
         let input_param_infos = sess
             .inputs
@@ -139,6 +144,11 @@ impl InferenceRuntime for Onnxruntime {
             })
             .collect::<anyhow::Result<_>>()?;
 
+        let sess = OnnxruntimeSession {
+            sess: ManuallyDrop::new(sess),
+            model: model_ptr,
+        };
+
         return Ok((sess, input_param_infos, output_param_infos));
 
         static ENVIRONMENT: Lazy<Arc<Environment>> = Lazy::new(|| {
@@ -158,7 +168,7 @@ impl InferenceRuntime for Onnxruntime {
     }
 
     fn run(
-        OnnxruntimeRunContext { sess, mut inputs }: OnnxruntimeRunContext<'_>,
+        OnnxruntimeRunContext { sess, inputs, ptr }: OnnxruntimeRunContext<'_>,
     ) -> anyhow::Result<Vec<OutputTensor>> {
         // FIXME: 現状では`f32`のみ対応。実行時にsessionからdatatypeが取れるので、別の型の対応も
         // おそらく可能ではあるが、それが必要になるよりもortクレートへの引越しが先になると思われる
@@ -176,6 +186,8 @@ impl InferenceRuntime for Onnxruntime {
 
         let outputs = sess.run(inputs)?;
 
+        drop(ptr);
+
         Ok(outputs
             .iter()
             .map(|o| OutputTensor::Float32((*(*o).try_extract().unwrap().view()).to_owned()))
@@ -183,18 +195,37 @@ impl InferenceRuntime for Onnxruntime {
     }
 }
 
-pub(crate) struct OnnxruntimeRunContext<'sess> {
-    sess: &'sess mut AssertSend<ort::session::InMemorySession<'sess>>,
-    inputs: Vec<Value<'sess>>,
+pub(crate) struct OnnxruntimeSession {
+    sess: ManuallyDrop<AssertSend<ort::session::InMemorySession<'static>>>,
+    model: *mut [u8],
 }
 
-impl<'sess> From<&mut AssertSend<ort::session::InMemorySession<'sess>>>
-    for OnnxruntimeRunContext<'sess>
-{
-    fn from(sess: &mut AssertSend<ort::session::InMemorySession<'sess>>) -> Self {
+#[allow(unsafe_code)]
+unsafe impl Send for OnnxruntimeSession {}
+
+impl Drop for OnnxruntimeSession {
+    fn drop(&mut self) {
+        #[allow(unsafe_code)]
+        unsafe {
+            // InMemorySessionのデストラクタ内でモデルのメモリに触ってるとまずい(未確認)ので手で開放する
+            ManuallyDrop::drop(&mut self.sess);
+            drop(Box::from_raw(self.model));
+        }
+    }
+}
+
+pub(crate) struct OnnxruntimeRunContext<'sess> {
+    sess: &'sess mut AssertSend<ort::session::InMemorySession<'static>>,
+    inputs: Vec<Value<'static>>,
+    ptr: AutoDeallocVec,
+}
+
+impl<'sess> From<&'sess mut OnnxruntimeSession> for OnnxruntimeRunContext<'sess> {
+    fn from(sess: &'sess mut OnnxruntimeSession) -> Self {
         Self {
-            sess,
+            sess: &mut *sess.sess,
             inputs: vec![],
+            ptr: AutoDeallocVec::new(),
         }
     }
 }
@@ -206,8 +237,37 @@ impl PushInputTensor for OnnxruntimeRunContext<'_> {
         [ push_float32 ] [ f32 ];
     )]
     fn method(&mut self, tensor: Array<T, impl Dimension + 'static>) {
+        let array = Box::new(tensor.into_dyn().into());
+        let array = Box::leak(array);
+        let array_ptr = array as *mut dyn Any;
         self.inputs
-            .push(Value::from_array(self.sess.allocator(), &tensor.into_dyn().into()).unwrap());
+            .push(Value::from_array(self.sess.allocator(), array).unwrap());
+        self.ptr.push(array_ptr);
+    }
+}
+
+struct AutoDeallocVec {
+    inner: Vec<*mut dyn Any>,
+}
+
+impl AutoDeallocVec {
+    fn new() -> Self {
+        Self { inner: vec![] }
+    }
+
+    fn push(&mut self, ptr: *mut dyn Any) {
+        self.inner.push(ptr);
+    }
+}
+
+impl Drop for AutoDeallocVec {
+    fn drop(&mut self) {
+        self.inner.drain(..).for_each(|ptr| {
+            #[allow(unsafe_code)]
+            unsafe {
+                drop(Box::from_raw(ptr));
+            }
+        })
     }
 }
 
