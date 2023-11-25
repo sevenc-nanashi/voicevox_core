@@ -5,9 +5,9 @@ edition.workspace = true
 publish.workspace = true
 build = "build.rs"
 
+
 [lib]
 crate-type = ["cdylib"]
-name = "voicevox_core"
 
 [dependencies]
 voicevox_core.workspace = true

@@ -1,15 +1,8 @@
-use wasm_bindgen::prelude::*;
+use std::ffi::c_char;
+use std::ffi::CString;
 
-#[wasm_bindgen]
-extern "C" {
-    fn alert(s: &str);
-}
-
-#[wasm_bindgen]
-pub fn greet(name: &str) {
-    alert(&format!("Hello, {}!", voicevox_core::VERSION));
-}
-#[wasm_bindgen(start)]
-pub fn start() {
-    alert(&format!("Hello, {}!", voicevox_core::VERSION));
+#[no_mangle]
+pub fn greet() -> *mut c_char {
+    let version = voicevox_core::VERSION;
+    CString::new(version).unwrap().into_raw()
 }
