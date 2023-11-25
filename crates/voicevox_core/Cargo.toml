@@ -10,30 +10,32 @@ directml = ["ort/directml"]
 
 [dependencies]
 anyhow.workspace = true
-# async_zip.workspace = true
-cfg-if = "1.0.0"
+# async_zip = { workspace = true, features = ["full"] }
+cfg-if.workspace = true
 derive-getters.workspace = true
-derive-new = "0.5.9"
+derive-new.workspace = true
 derive_more.workspace = true
-duplicate = "1.0.0"
+duplicate.workspace = true
 easy-ext.workspace = true
-educe = "0.4.23"
-enum-map = "3.0.0-beta.1"
-fs-err.workspace = true
+educe.workspace = true
+enum-map.workspace = true
+fs-err = { workspace = true, features = ["tokio"] }
 futures.workspace = true
-indexmap.workspace = true
+indexmap = { workspace = true, features = ["serde"] }
 itertools.workspace = true
-nanoid = "0.4.0"
+nanoid.workspace = true
 ndarray.workspace = true
 once_cell.workspace = true
+onnxruntime.workspace = true
+open_jtalk.workspace = true
 regex.workspace = true
-serde.workspace = true
-serde_json.workspace = true
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true, features = ["preserve_order"] }
 tempfile.workspace = true
 thiserror.workspace = true
-tokio.workspace = true
+tokio = { workspace = true, features = ["rt"] }
 tracing.workspace = true
-uuid.workspace = true
+uuid = { workspace = true, features = ["v4", "serde"] }
 voicevox_core_macros = { path = "../voicevox_core_macros" }
 zip = { version = "0.6.6", default-features = false, features = [
   "deflate-zlib",
@@ -50,8 +52,8 @@ features = ["half", "copy-dylibs"]
 path = "../../../open_jtalk-rs/crates/open_jtalk"
 
 [dev-dependencies]
-heck = "0.4.0"
-pretty_assertions = "1.3.0"
+heck.workspace = true
+pretty_assertions.workspace = true
 rstest.workspace = true
 #test_util.workspace = true
 
