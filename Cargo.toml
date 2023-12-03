@@ -86,8 +86,9 @@ git = "https://github.com/VOICEVOX/onnxruntime-rs.git"
 rev = "ebb9dcb9b26ee681889b52b6db3b4f642b04a250"
 
 [workspace.dependencies.open_jtalk]
-git = "https://github.com/VOICEVOX/open_jtalk-rs.git"
-rev = "a16714ce16dec76fd0e3041a7acfa484921db3b5"
+# git = "https://github.com/VOICEVOX/open_jtalk-rs.git"
+# rev = "a16714ce16dec76fd0e3041a7acfa484921db3b5"
+path = "../open_jtalk-rs/crates/open_jtalk"
 
 # FIXME: iOS対応のpull request(https://github.com/wesleywiser/process_path/pull/16)がマージされる見込みが無いため
 [workspace.dependencies.process_path]

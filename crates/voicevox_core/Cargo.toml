@@ -19,21 +19,20 @@ duplicate.workspace = true
 easy-ext.workspace = true
 educe.workspace = true
 enum-map.workspace = true
-fs-err = { workspace = true, features = ["tokio"] }
+fs-err = { workspace = true }
 futures.workspace = true
 indexmap = { workspace = true, features = ["serde"] }
 itertools.workspace = true
 nanoid.workspace = true
 ndarray.workspace = true
 once_cell.workspace = true
-onnxruntime.workspace = true
 open_jtalk.workspace = true
 regex.workspace = true
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true, features = ["preserve_order"] }
 tempfile.workspace = true
 thiserror.workspace = true
-tokio = { workspace = true, features = ["rt"] }
+tokio = { workspace = true, features = ["sync", "macros", "rt"] }
 tracing.workspace = true
 uuid = { workspace = true, features = ["v4", "serde"] }
 voicevox_core_macros = { path = "../voicevox_core_macros" }
@@ -45,11 +44,6 @@ zip = { version = "0.6.6", default-features = false, features = [
 version = "1.16.3"
 default-features = false
 features = ["half", "copy-dylibs"]
-
-[dependencies.open_jtalk]
-# git = "https://github.com/VOICEVOX/open_jtalk-rs.git"
-# rev = "a16714ce16dec76fd0e3041a7acfa484921db3b5"
-path = "../../../open_jtalk-rs/crates/open_jtalk"
 
 [dev-dependencies]
 heck.workspace = true

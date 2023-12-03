@@ -5,10 +5,15 @@ edition.workspace = true
 publish.workspace = true
 build = "build.rs"
 
-
 [lib]
 crate-type = ["cdylib"]
 
 [dependencies]
 voicevox_core.workspace = true
-wasm-bindgen = "0.2.87"
+serde = { workspace = true, features = ["derive"] }
+serde_json.workspace = true
+base64 = "0.21.5"
+tempfile.workspace = true
+tokio = { workspace = true, features = ["rt"] }
+once_cell.workspace = true
+tracing-subscriber = { workspace = true, features = ["env-filter"] }

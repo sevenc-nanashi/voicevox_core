@@ -396,9 +396,9 @@ checksum = "904dfeac50f3cdaba28fc6f57fdcddb75f49ed61346676a78c4ffe55877802fd"
 
 [[package]]
 name = "base64"
-version = "0.21.0"
+version = "0.21.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a4a4ddaa51a5bc52a6948f74c06d20aaaddb71924eab79b8c97a8c556e942d6a"
+checksum = "35636a1494ede3b646cc98f74f8e62c773a38a659ebc777a2cf26b9b74171df9"
 
 [[package]]
 name = "base64ct"
@@ -1418,6 +1418,9 @@ name = "fs-err"
 version = "2.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0845fa252299212f0389d64ba26f34fa32cfe41588355f21ed507c59a0f64541"
+dependencies = [
+ "tokio",
+]
 
 [[package]]
 name = "futures"
@@ -2460,7 +2463,7 @@ checksum = "496442a5ec5ad38376a0c49bc0f31ba55dbda5276cf12757498c378c3bc2ea1c"
 dependencies = [
  "arc-swap",
  "async-trait",
- "base64 0.21.0",
+ "base64 0.21.5",
  "bytes 1.1.0",
  "cfg-if",
  "chrono",
@@ -3261,7 +3264,7 @@ version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d194b56d58803a43635bdc398cd17e383d6f71f9182b9a192c127ca42494a59b"
 dependencies = [
- "base64 0.21.0",
+ "base64 0.21.5",
 ]
 
 [[package]]
@@ -3426,7 +3429,7 @@ version = "3.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1ca3b16a3d82c4088f343b7480a93550b3eabe1a358569c2dfe38bbcead07237"
 dependencies = [
- "base64 0.21.0",
+ "base64 0.21.5",
  "chrono",
  "hex",
  "indexmap 1.9.1",
@@ -4412,8 +4415,14 @@ dependencies = [
 name = "voicevox_core_wasm_api"
 version = "0.0.0"
 dependencies = [
+ "base64 0.21.5",
+ "once_cell",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "tokio",
+ "tracing-subscriber",
  "voicevox_core",
- "wasm-bindgen",
 ]
 
 [[package]]

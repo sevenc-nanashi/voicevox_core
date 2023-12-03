@@ -1,5 +1,6 @@
 use indexmap::IndexMap;
 use itertools::join;
+use std::fs;
 use uuid::Uuid;
 
 use super::word::*;
@@ -33,7 +34,7 @@ impl UserDict {
     /// ファイルが読めなかった、または内容が不正だった場合はエラーを返す。
     pub async fn load(&self, store_path: &str) -> Result<()> {
         let words = async {
-            let words = &fs_err::tokio::read(store_path).await?;
+            let words = &fs::read(store_path)?;
             let words = serde_json::from_slice::<IndexMap<_, _>>(words)?;
             Ok(words)
         }
@@ -79,11 +80,10 @@ impl UserDict {
 
     /// ユーザー辞書を保存する。
     pub async fn save(&self, store_path: &str) -> Result<()> {
-        fs_err::tokio::write(
+        fs::write(
             store_path,
             serde_json::to_vec(&self.words).expect("should not fail"),
         )
-        .await
         .map_err(|e| ErrorRepr::SaveUserDict(e.into()).into())
     }
 
