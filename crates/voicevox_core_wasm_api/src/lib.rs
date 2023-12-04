@@ -45,18 +45,19 @@ fn load_model(model: &[u8]) -> String {
 
 #[no_mangle]
 pub fn message(message: *const c_char) -> *mut c_char {
-    dbg!("message");
+    std::env::set_var("RUST_BACKTRACE", "full");
     let message = unsafe { CString::from_raw(message as *mut c_char) };
     let message = message.into_string().unwrap();
-    dbg!(&message);
     let message = serde_json::from_str::<Message>(&message).unwrap();
     let result = match message {
         Message::GetVersion(()) => serde_json::to_string(&get_version()).unwrap(),
-        Message::LoadModel { payload } => load_model(
-            &general_purpose::STANDARD_NO_PAD
-                .decode(payload.base64)
-                .unwrap(),
-        ),
+        Message::LoadModel { payload } => {
+            load_model(
+                &general_purpose::STANDARD
+                    .decode(payload.base64)
+                    .expect("base64 decode error"),
+            )
+        }
     };
     let result = CString::new(result).unwrap();
 

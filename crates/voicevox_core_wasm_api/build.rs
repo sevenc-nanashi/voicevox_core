@@ -10,4 +10,5 @@ fn main() {
     println!("cargo:rustc-link-arg=-sINITIAL_MEMORY=256MB");
     println!("cargo:rustc-link-arg=-sASSERTIONS=2");
     println!("cargo:rustc-link-arg=-o./target/wasm32-unknown-emscripten/release/voicevox_core_wasm_api.js");
+    println!("cargo:rustc-link-arg=-DEMSCRIPTEN_STANDALONE_WASM");
 }
