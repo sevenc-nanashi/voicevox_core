@@ -10,7 +10,6 @@ directml = ["ort/directml"]
 
 [dependencies]
 anyhow.workspace = true
-async_zip = { workspace = true, features = ["full"] }
 derive-getters.workspace = true
 derive-new.workspace = true
 derive_more.workspace = true
@@ -58,6 +57,9 @@ windows = { version = "0.43.0", features = [
   "Win32_Foundation",
   "Win32_Graphics_Dxgi",
 ] }
+
+[target."cfg(not(target_family = \"wasm\"))".dependencies]
+async_zip = { workspace = true, features = ["full"] }
 
 [lints.rust]
 unsafe_code = "deny"      # FIXME: あまり意味が無くなっているため潔く`allow`にする。あるいはunsafeを撲滅する

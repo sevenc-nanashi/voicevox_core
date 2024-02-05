@@ -9,6 +9,18 @@ fn main() {
     println!("cargo:rustc-link-arg=-sTOTAL_STACK=128MB");
     println!("cargo:rustc-link-arg=-sINITIAL_MEMORY=256MB");
     println!("cargo:rustc-link-arg=-sASSERTIONS=2");
-    println!("cargo:rustc-link-arg=-o./target/wasm32-unknown-emscripten/release/voicevox_core_wasm_api.js");
+    let out_dir = std::path::PathBuf::from(std::env::var("OUT_DIR").unwrap());
+    let target_dir = out_dir
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap();
+    println!(
+        "cargo:rustc-link-arg=-o{}/voicevox_core_wasm_api.js",
+        target_dir.display()
+    );
+
     println!("cargo:rustc-link-arg=-DEMSCRIPTEN_STANDALONE_WASM");
 }

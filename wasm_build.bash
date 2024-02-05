@@ -164,8 +164,9 @@
 #                     -s EXPORTED_RUNTIME_METHODS=ccall"
 # ビルド
 set -eux
-cargo build --target wasm32-unknown-emscripten --release -p voicevox_core_wasm_api
-cp ./target/wasm32-unknown-emscripten/release/voicevox_core_wasm_api.{js,wasm} ./crates/voicevox_core_wasm_api/__gi_test_web/public
-wasm2wat ./target/wasm32-unknown-emscripten/release/voicevox_core_wasm_api.wasm --generate-names > ./__gi_test.wat
+export ORT_LIB_LOCATION=/home/sevenc7c/voicevox/wasm/onnxruntime/build/Linux/Release
+cargo build --target wasm32-unknown-emscripten -p voicevox_core_wasm_api $@
+cp ./target/wasm32-unknown-emscripten/debug/voicevox_core_wasm_api.{js,wasm} ./crates/voicevox_core_wasm_api/__gi_test_web/public
+wasm2wat ./target/wasm32-unknown-emscripten/debug/voicevox_core_wasm_api.wasm --generate-names > ./__gi_test.wat
 npx prettier --write ./crates/voicevox_core_wasm_api/__gi_test_web/public/voicevox_core_wasm_api.js
-ruby __gi_build_replace.rb
+ruby wasm_build_replace.rb

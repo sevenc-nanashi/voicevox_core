@@ -189,6 +189,7 @@ pub(crate) mod blocking {
     }
 }
 
+#[cfg(not(target_family = "wasm"))]
 pub(crate) mod tokio {
     use std::{collections::HashMap, io, path::Path};
 
@@ -341,6 +342,55 @@ pub(crate) mod tokio {
                 },
                 source: Some(source),
             })
+        }
+    }
+}
+
+#[cfg(target_family = "wasm")]
+pub(crate) mod tokio {
+    use std::path::Path;
+
+    use enum_map::EnumMap;
+
+    use crate::{
+        error::LoadModelResult, infer::domain::InferenceOperationImpl, Result, VoiceModelMeta,
+    };
+
+    use super::{VoiceModelHeader, VoiceModelId};
+
+    /// 音声モデル。
+    ///
+    /// VVMファイルと対応する。
+    #[derive(Clone)]
+    pub struct VoiceModel {
+        inner: super::blocking::VoiceModel,
+    }
+
+    impl self::VoiceModel {
+        pub(crate) async fn read_inference_models(
+            &self,
+        ) -> LoadModelResult<EnumMap<InferenceOperationImpl, Vec<u8>>> {
+            self.inner.read_inference_models()
+        }
+        /// VVMファイルから`VoiceModel`をコンストラクトする。
+        pub async fn from_path(path: impl AsRef<Path>) -> Result<Self> {
+            Ok(Self {
+                inner: super::blocking::VoiceModel::from_path(path)?,
+            })
+        }
+
+        /// ID。
+        pub fn id(&self) -> &VoiceModelId {
+            &self.inner.header().id
+        }
+
+        /// メタ情報。
+        pub fn metas(&self) -> &VoiceModelMeta {
+            &self.inner.header().metas
+        }
+
+        pub(crate) fn header(&self) -> &VoiceModelHeader {
+            &self.inner.header()
         }
     }
 }
