@@ -11,34 +11,28 @@ mod metas;
 mod numerics;
 mod result;
 mod synthesizer;
+mod task;
 mod user_dict;
 mod version;
 mod voice_model;
 
-#[doc(hidden)]
 pub mod __internal;
+pub mod blocking;
+pub mod tokio;
 
 #[cfg(test)]
 mod test_util;
 
-#[cfg(test)]
-use self::test_util::*;
-
-pub use self::engine::{AccentPhraseModel, AudioQueryModel, OpenJtalk};
-pub use self::error::*;
-pub use self::metas::*;
-pub use self::result::*;
-pub use self::voice_model::*;
-pub use devices::*;
-pub use manifest::*;
-pub use synthesizer::*;
-pub use user_dict::*;
-pub use version::*;
-
-use derive_getters::*;
-use derive_new::new;
-use nanoid::nanoid;
-#[cfg(test)]
-use rstest::*;
-
-use cfg_if::cfg_if;
+pub use self::{
+    devices::SupportedDevices,
+    engine::{AccentPhraseModel, AudioQueryModel, FullcontextExtractor},
+    error::{Error, ErrorKind},
+    metas::{
+        RawStyleId, RawStyleVersion, SpeakerMeta, StyleId, StyleMeta, StyleVersion, VoiceModelMeta,
+    },
+    result::Result,
+    synthesizer::{AccelerationMode, InitializeOptions, SynthesisOptions, TtsOptions},
+    user_dict::{UserDictWord, UserDictWordType},
+    version::VERSION,
+    voice_model::{RawVoiceModelId, VoiceModelId},
+};

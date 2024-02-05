@@ -1,7 +1,8 @@
 use std::collections::HashMap;
 
-use super::*;
-use crate::engine::open_jtalk::OpenjtalkFunctionError;
+use crate::engine::open_jtalk::FullcontextExtractor;
+use derive_getters::Getters;
+use derive_new::new;
 use once_cell::sync::Lazy;
 use regex::Regex;
 
@@ -11,7 +12,7 @@ use regex::Regex;
 pub(crate) struct FullContextLabelError {
     context: ErrorKind,
     #[source]
-    source: Option<OpenjtalkFunctionError>,
+    source: Option<anyhow::Error>,
 }
 
 #[derive(derive_more::Display, Debug)]
@@ -50,7 +51,7 @@ static J1_REGEX: Lazy<Regex> = Lazy::new(|| Regex::new(r"(/J:(\d+|xx)_)").unwrap
 
 fn string_feature_by_regex(re: &Regex, label: &str) -> std::result::Result<String, ErrorKind> {
     if let Some(caps) = re.captures(label) {
-        Ok(caps.get(2).unwrap().as_str().to_string())
+        Ok(caps[2].to_string())
     } else {
         Err(ErrorKind::LabelParse {
             label: label.into(),
@@ -143,11 +144,11 @@ impl AccentPhrase {
                     != phonemes.get(i + 1).unwrap().contexts().get("a2").unwrap()
             {
                 if mora_phonemes.len() == 1 {
-                    moras.push(Mora::new(None, mora_phonemes.get(0).unwrap().clone()));
+                    moras.push(Mora::new(None, mora_phonemes[0].clone()));
                 } else if mora_phonemes.len() == 2 {
                     moras.push(Mora::new(
-                        Some(mora_phonemes.get(0).unwrap().clone()),
-                        mora_phonemes.get(1).unwrap().clone(),
+                        Some(mora_phonemes[0].clone()),
+                        mora_phonemes[1].clone(),
                     ));
                 } else {
                     return Err(ErrorKind::TooLongMora { mora_phonemes });
@@ -156,7 +157,7 @@ impl AccentPhrase {
             }
         }
 
-        let mora = moras.get(0).unwrap();
+        let mora = &moras[0];
         let mut accent: usize = mora
             .vowel()
             .contexts()
@@ -316,16 +317,15 @@ impl Utterance {
     }
 
     pub(crate) fn extract_full_context_label(
-        open_jtalk: &open_jtalk::OpenJtalk,
+        open_jtalk: &impl FullcontextExtractor,
         text: impl AsRef<str>,
     ) -> Result<Self> {
-        let labels =
-            open_jtalk
-                .extract_fullcontext(text)
-                .map_err(|source| FullContextLabelError {
-                    context: ErrorKind::OpenJtalk,
-                    source: Some(source),
-                })?;
+        let labels = open_jtalk
+            .extract_fullcontext(text.as_ref())
+            .map_err(|source| FullContextLabelError {
+                context: ErrorKind::OpenJtalk,
+                source: Some(source),
+            })?;
 
         labels
             .into_iter()
