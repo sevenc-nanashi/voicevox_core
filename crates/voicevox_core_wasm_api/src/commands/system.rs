@@ -29,3 +29,7 @@ pub fn init() -> String {
 
     "".to_string()
 }
+
+pub fn get_version() -> String {
+    env!("CARGO_PKG_VERSION").to_string()
+}

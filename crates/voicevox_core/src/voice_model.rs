@@ -96,10 +96,18 @@ pub(crate) mod blocking {
                 self.header.manifest.predict_duration_filename(),
                 self.header.manifest.predict_intonation_filename(),
                 self.header.manifest.decode_filename(),
-            ]
-            .into_par_iter()
-            .map(|filename| reader.read_vvm_entry(filename))
-            .collect::<std::result::Result<Vec<_>, _>>()?
+            ];
+            let model_bytes = if cfg!(target_family = "wasm") {
+                model_bytes
+                    .iter()
+                    .map(|filename| reader.read_vvm_entry(filename))
+                    .collect::<std::result::Result<Vec<_>, _>>()?
+            } else {
+                model_bytes
+                    .into_par_iter()
+                    .map(|filename| reader.read_vvm_entry(filename))
+                    .collect::<std::result::Result<Vec<_>, _>>()?
+            }
             .try_into()
             .unwrap_or_else(|_| panic!("should be same length"));
 
