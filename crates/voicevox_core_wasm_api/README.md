@@ -25,5 +25,5 @@
 ```
 export ORT_LIB_LOCATION=/home/sevenc7c/voicevox/wasm/onnxruntime/build/Linux/Release
 cargo build --target wasm32-unknown-emscripten -p voicevox_core_wasm_api --release $@
-cp ./target/wasm32-unknown-emscripten/release/voicevox_core_wasm_api.{js,wasm} ./crates/voicevox_core_wasm_api/__gi_test_web/public
+cp ./target/wasm32-unknown-emscripten/release/voicevox_core_wasm_api.{js,wasm} ./crates/voicevox_core_wasm_api/web/public
 ```
