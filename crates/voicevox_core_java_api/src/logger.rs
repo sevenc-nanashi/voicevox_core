@@ -25,14 +25,18 @@ extern "system" fn Java_jp_hiroshiba_voicevoxcore_Dll_00024LoggerInitializer_ini
         use tracing_subscriber::{fmt::format::Writer, EnvFilter};
 
         // FIXME: `try_init` → `init` （subscriberは他に存在しないはずなので）
-        let _ = tracing_subscriber::fmt()
-            .with_env_filter(if env::var_os(EnvFilter::DEFAULT_ENV).is_some() {
+        let mut f = tracing_subscriber::fmt().with_env_filter(
+            if env::var_os(EnvFilter::DEFAULT_ENV).is_some() {
                 EnvFilter::from_default_env()
             } else {
                 "error,voicevox_core=info,voicevox_core_c_api=info,onnxruntime=error".into()
-            })
-            .with_timer(local_time as fn(&mut Writer<'_>) -> _)
-            .with_ansi(out().is_terminal() && env_allows_ansi())
+            },
+        );
+        // wasm環境でchronoを使うとpanicするので、wasmではデフォルトの時間表示にする。
+        if cfg!(not(target_family = "wasm")) {
+            f = f.with_timer(local_time as fn(&mut Writer<'_>) -> _);
+        }
+        f.with_ansi(out().is_terminal() && env_allows_ansi())
             .with_writer(out)
             .try_init();
 

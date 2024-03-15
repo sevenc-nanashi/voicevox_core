@@ -61,7 +61,6 @@ fn init_logger_once() {
             } else {
                 "error,voicevox_core=info,voicevox_core_c_api=info,onnxruntime=info".into()
             })
-            .with_timer(local_time as fn(&mut Writer<'_>) -> _)
             .with_ansi(ansi)
             .with_writer(out)
             .try_init();

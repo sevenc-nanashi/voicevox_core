@@ -57,7 +57,7 @@ test_util.workspace = true
 toml.workspace = true
 typetag.workspace = true
 
-[target."cfg(target_family = \"wasm\")".build-dependencies]
+[build-dependencies]
 regex.workspace = true
 
 [lints.rust]

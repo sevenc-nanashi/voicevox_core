@@ -9,9 +9,11 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "jszip": "3.10.1",
     "vue": "^3.3.8"
   },
   "devDependencies": {
+    "@types/emscripten": "^1.39.10",
     "@types/node": "^18.18.13",
     "@vitejs/plugin-vue": "^4.5.0",
     "typescript": "^5.2.2",

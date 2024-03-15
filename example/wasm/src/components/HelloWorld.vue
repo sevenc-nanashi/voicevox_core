@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from "vue";
-import { Synthesizer, Model } from "../voicevoxCore";
+import { Synthesizer, Model, OpenJtalkRc } from "../voicevoxCore";
 import * as core from "../voicevoxCore";
 
 const getVersion = async () => {
@@ -21,6 +21,7 @@ const modelLoad = async () => {
 };
 
 const synthesizerCreate = async () => {
+  const openJtalkRc = await OpenJtalkRc.new();
   const id = await Synthesizer.create();
   synthesizer.value = id;
 };
