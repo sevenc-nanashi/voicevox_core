@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from "vue";
-import { Synthesizer, Model, OpenJtalkRc } from "../voicevoxCore";
+import { Synthesizer, VoiceModel, OpenJtalkRc } from "../voicevoxCore";
 import * as core from "../voicevoxCore";
 
 const getVersion = async () => {
@@ -8,21 +8,15 @@ const getVersion = async () => {
 };
 
 const modelLoad = async () => {
-  const modelBlob = await fetch("sample.vvm").then((res) => res.blob());
-  const modelB64 = await new Promise<string>((resolve) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      resolve((reader.result as string).split(",")[1]);
-    };
-    reader.readAsDataURL(modelBlob);
-  });
-  const id = await Model.load(modelB64);
+  const modelBlob = await fetch("/sample.vvm").then((res) => res.blob());
+  const modelUint8Array = new Uint8Array(await modelBlob.arrayBuffer());
+  const id = await VoiceModel.newFromPath(modelUint8Array);
   model.value = id;
 };
 
 const synthesizerCreate = async () => {
   const openJtalkRc = await OpenJtalkRc.new();
-  const id = await Synthesizer.create();
+  const id = await Synthesizer.new(openJtalkRc);
   synthesizer.value = id;
 };
 const synthesizerLoadModel = async () => {
@@ -32,7 +26,7 @@ const synthesizerLoadModel = async () => {
   if (synthesizer.value === undefined) {
     return;
   }
-  await synthesizer.value.loadModel(model.value);
+  await synthesizer.value.loadVoiceModel(model.value);
 };
 const synthesizerTts = async () => {
   if (synthesizer.value === undefined) {
@@ -43,7 +37,7 @@ const synthesizerTts = async () => {
 };
 
 const version = ref<string | undefined>(undefined);
-const model = ref<Model | undefined>(undefined);
+const model = ref<VoiceModel | undefined>(undefined);
 const synthesizer = ref<Synthesizer | undefined>(undefined);
 const audioSrc = ref<string | undefined>(undefined);
 </script>

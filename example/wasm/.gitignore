@@ -25,4 +25,6 @@ dist-ssr
 
 src/artifacts/*.mjs
 src/artifacts/*.wasm
-src/artifacts/*.zip
+!public
+public/*
+!public/.gitkeep

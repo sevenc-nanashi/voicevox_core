@@ -12,9 +12,11 @@ cargo build -p voicevox_core_c_api --target wasm32-unknown-emscripten -r
 cp ./target/wasm32-unknown-emscripten/release/voicevox_core_wasm_api.{mjs,wasm} ./example/wasm/src/artifacts/
 ```
 
-3. OpenJtalk の辞書を zip にして、`./example/wasm/src/artifacts/` に配置する
+3. OpenJtalk の辞書を zip にして、`./example/wasm/public/` に配置する
 
 ```bash
 cd crates/test_util/data
-zip -r ../../../example/wasm/src/artifacts/open_jtalk_dic.zip open_jtalk_dic_utf_8-1.11
+zip -r ../../../example/wasm/public/open_jtalk_dic.zip open_jtalk_dic
 ```
+
+4. sample.vvm を `./example/wasm/public/` に配置する

@@ -3,7 +3,6 @@ import raw, {
   VoicevoxCore,
   VoicevoxResultCode,
 } from "./artifacts/voicevox_core_wasm_api";
-import dict from "./artifacts/open_jtalk_dic.zip?url";
 import JSZip from "jszip";
 
 let _voicevoxCore: VoicevoxCore | undefined;
@@ -27,11 +26,16 @@ raw().then((vvc) => {
       ["string", "string"],
       ["RUST_BACKTRACE", "full"]
     );
+
+    vvc.FS.mkdir("/data");
+    // @ts-ignore
+    window.vvc = vvc;
     for (const resolve of resolvers) {
       resolve(vvc);
     }
   });
 });
+
 export async function getVersion() {
   const vvc = await voicevoxCore();
   return vvc.ccall("voicevox_get_version", "string", [], []);
@@ -49,46 +53,159 @@ function throwIfError(vvc: VoicevoxCore, code: VoicevoxResultCode) {
   }
 }
 
-function allocPointer(vvc: VoicevoxCore) {
-  return vvc._malloc(4) as Pointer;
+function allocPointer<T>(vvc: VoicevoxCore) {
+  return vvc._malloc(4) as Pointer<T>;
 }
+
+function fileExists(vvc: VoicevoxCore, path: string) {
+  try {
+    vvc.FS.stat(path);
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+const openJtalkFinalizer = new FinalizationRegistry(
+  (pointer: Pointer<"OpenJtalkRc">) => {
+    const vvc = _voicevoxCore;
+    if (vvc) {
+      vvc.ccall("voicevox_open_jtalk_rc_delete", "void", ["number"], [pointer]);
+    }
+  }
+);
 
 export class OpenJtalkRc {
   static async new() {
     const vvc = await voicevoxCore();
     const zip = await JSZip.loadAsync(
-      await fetch(dict).then((res) => res.arrayBuffer())
+      await fetch("/open_jtalk_dic.zip").then((res) => res.arrayBuffer())
     );
-    try {
+    if (!fileExists(vvc, "/data/open_jtalk_dic_utf_8-1.11/")) {
       for (const [name, data] of Object.entries(zip.files)) {
         console.log("Extracting", name);
         if (name.endsWith("/")) {
-          vvc.FS.mkdir(`/${name}`);
+          vvc.FS.mkdir(`/data/${name}`);
         } else {
-          vvc.FS.writeFile(`/${name}`, await data.async("uint8array"), {
+          vvc.FS.writeFile(`/data/${name}`, await data.async("uint8array"), {
             flags: "w",
           });
         }
       }
-    } catch (e) {
-      console.error(e);
     }
-    const returnPtr = allocPointer(vvc);
+    const returnPtr = allocPointer<"OpenJtalkRc">(vvc);
     throwIfError(
       vvc,
       vvc.ccall(
         "voicevox_open_jtalk_rc_new",
         "number",
         ["string", "number"],
-        ["/open_jtalk_dic_utf_8-1.11", returnPtr]
+        ["/data/open_jtalk_dic_utf_8-1.11", returnPtr]
       )
     );
-    const pointer = vvc.getValue(returnPtr, "i32") as Pointer;
+    const pointer = vvc.getValue(returnPtr, "i32") as Pointer<"OpenJtalkRc">;
 
-    return new OpenJtalkRc(pointer);
+    const openJtalkRc = new OpenJtalkRc(pointer);
+    console.log("Initialized OpenJtalkRc", openJtalkRc);
+
+    openJtalkFinalizer.register(openJtalkRc, pointer);
+
+    return openJtalkRc;
   }
-  constructor(private pointer: Pointer) {}
+  constructor(public _pointer: Pointer<"OpenJtalkRc">) {}
 }
 
-export class Synthesizer {}
-export class Model {}
+const synthesizerFinalizer = new FinalizationRegistry(
+  (pointer: Pointer<"VoicevoxSynthesizer">) => {
+    const vvc = _voicevoxCore;
+    if (vvc) {
+      vvc.ccall("voicevox_synthesizer_delete", "void", ["number"], [pointer]);
+    }
+  }
+);
+
+export class Synthesizer {
+  static async new(openJtalkRc: OpenJtalkRc) {
+    const vvc = await voicevoxCore();
+    const accelerationModePtr = allocPointer<"AccelerationMode">(vvc);
+    const cpuNumThreadsPtr = allocPointer<"i32">(vvc);
+
+    vvc.ccall(
+      "voicevox_make_default_initialize_options_wasm",
+      "void",
+      ["number", "number"],
+      [accelerationModePtr, cpuNumThreadsPtr]
+    );
+    const accelerationMode = vvc.getValue(accelerationModePtr, "i32");
+    const cpuNumThreads = vvc.getValue(cpuNumThreadsPtr, "i32");
+
+    const returnPtr = allocPointer<"VoicevoxSynthesizer">(vvc);
+    throwIfError(
+      vvc,
+      vvc.ccall(
+        "voicevox_synthesizer_new_wasm",
+        "number",
+        ["number", "number", "number", "number"],
+        [openJtalkRc._pointer, accelerationMode, cpuNumThreads, returnPtr]
+      )
+    );
+
+    const synthesizer = new Synthesizer(openJtalkRc, returnPtr);
+    console.log("Initialized Synthesizer", synthesizer);
+
+    synthesizerFinalizer.register(synthesizer, returnPtr);
+
+    return synthesizer;
+  }
+  constructor(
+    private openJtalkRc: OpenJtalkRc,
+    public _pointer: Pointer<"VoicevoxSynthesizer">
+  ) {}
+
+  async loadVoiceModel(model: VoiceModel) {
+    const vvc = await voicevoxCore();
+    throwIfError(
+      vvc,
+      vvc.ccall(
+        "voicevox_synthesizer_load_voice_model",
+        "number",
+        ["number", "number"],
+        [this._pointer, model._pointer]
+      )
+    );
+  }
+}
+const voiceModelFinalizer = new FinalizationRegistry(
+  (pointer: Pointer<"VoicevoxVoiceModel">) => {
+    const vvc = _voicevoxCore;
+    if (vvc) {
+      vvc.ccall("voicevox_voice_model_delete", "void", ["number"], [pointer]);
+    }
+  }
+);
+export class VoiceModel {
+  static async newFromPath(model: Uint8Array) {
+    const vvc = await voicevoxCore();
+    const nonce = Math.floor(Math.random() * 1000000);
+    vvc.FS.writeFile(`/data/voice_model_${nonce}.vvm`, model, { flags: "w" });
+    const returnPtr = allocPointer<"VoicevoxVoiceModel">(vvc);
+    throwIfError(
+      vvc,
+      vvc.ccall(
+        "voicevox_voice_model_new_from_path",
+        "number",
+        ["string", "number"],
+        [`/data/voice_model_${nonce}.vvm`, returnPtr]
+      )
+    );
+    const pointer = vvc.getValue(
+      returnPtr,
+      "i32"
+    ) as Pointer<"VoicevoxVoiceModel">;
+    const voiceModel = new VoiceModel(pointer);
+    console.log("Initialized VoiceModel", voiceModel);
+    voiceModelFinalizer.register(voiceModel, pointer);
+    return voiceModel;
+  }
+  constructor(public _pointer: Pointer<"VoicevoxVoiceModel">) {}
+}

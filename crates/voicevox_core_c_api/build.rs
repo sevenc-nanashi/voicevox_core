@@ -29,19 +29,31 @@ fn main() {
             std::env::var("CARGO_MANIFEST_DIR").unwrap() + "/wasm_library.js"
         );
 
-        let lib_rs = fs::read_to_string("src/lib.rs").unwrap();
         let re = Regex::new(r#"pub (?:unsafe )?extern "C" fn (\w+)"#).unwrap();
         let mut functions = vec![
             "_malloc".to_string(),
             "_free".to_string(),
             "_setenv".to_string(),
         ];
+        let lib_rs = fs::read_to_string("src/lib.rs").unwrap();
+        let wasm_rs = fs::read_to_string("src/wasm.rs").unwrap();
         for cap in re.captures_iter(&lib_rs) {
+            functions.push(format!("_{}", cap[1].to_string()));
+        }
+        for cap in re.captures_iter(&wasm_rs) {
             functions.push(format!("_{}", cap[1].to_string()));
         }
         println!(
             "cargo:rustc-link-arg=-sEXPORTED_RUNTIME_METHODS=[\"{}\"]",
-            ["ccall"].join("\",\"")
+            [
+                "ccall",
+                "dynCall",
+                "stackSave",
+                "stackRestore",
+                "stackAlloc",
+                "stackFree"
+            ]
+            .join("\",\"")
         );
         println!(
             "cargo:rustc-link-arg=-sEXPORTED_FUNCTIONS=['{}']",

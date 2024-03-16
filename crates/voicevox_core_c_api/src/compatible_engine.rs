@@ -68,19 +68,12 @@ static VOICE_MODEL_SET: Lazy<VoiceModelSet> = Lazy::new(|| {
         let root_dir: PathBuf = if let Some(root_dir) = env::var_os(ROOT_DIR_ENV_NAME) {
             root_dir.into()
         } else {
-            #[cfg(target_family = "wasm")]
-            {
-                unimplemented!()
-            }
-            #[cfg(not(target_family = "wasm"))]
-            {
-                process_path::get_dylib_path()
-                    .or_else(process_path::get_executable_path)
-                    .unwrap()
-                    .parent()
-                    .unwrap_or_else(|| "".as_ref())
-                    .join("model")
-            }
+            process_path::get_dylib_path()
+                .or_else(process_path::get_executable_path)
+                .unwrap()
+                .parent()
+                .unwrap_or_else(|| "".as_ref())
+                .join("model")
         };
 
         root_dir

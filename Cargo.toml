@@ -101,8 +101,16 @@ path = "../open_jtalk-rs/crates/open_jtalk"
 
 # FIXME: iOS対応のpull request(https://github.com/wesleywiser/process_path/pull/16)がマージされる見込みが無いため
 [workspace.dependencies.process_path]
-git = "https://github.com/VOICEVOX/process_path.git"
-rev = "de226a26e8e18edbdb1d6f986afe37bbbf35fbf4"
+# git = "https://github.com/VOICEVOX/process_path.git"
+# rev = "de226a26e8e18edbdb1d6f986afe37bbbf35fbf4"
+
+# wasm32-unknown-emscriptenに対応した（Noneにフォールバック）ブランチ
+git = "https://github.com/sevenc-nanashi/process_path.git"
+branch = "add/wasm"
+
+[patch.crates-io.iana-time-zone]
+git = "https://github.com/sevenc-nanashi/iana-time-zone.git"
+branch = "fix/wasm32-unknown-emscripten"
 
 [workspace.package]
 version = "0.0.0"
