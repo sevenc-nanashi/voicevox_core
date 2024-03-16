@@ -55,15 +55,30 @@ fn init_logger_once() {
         };
 
         // FIXME: `try_init` → `init` （subscriberは他に存在しないはずなので）
-        let _ = tracing_subscriber::fmt()
-            .with_env_filter(if env::var_os(EnvFilter::DEFAULT_ENV).is_some() {
-                EnvFilter::from_default_env()
-            } else {
-                "error,voicevox_core=info,voicevox_core_c_api=info,onnxruntime=info".into()
-            })
-            .with_ansi(ansi)
-            .with_writer(out)
-            .try_init();
+        // wasm32-unknown-emscriptenではwith_timerを使うとリンクエラーになるので使わない
+        // TODO: きれいにする
+        let _ = if cfg!(target_arch = "wasm32") {
+            tracing_subscriber::fmt()
+                .with_env_filter(if env::var_os(EnvFilter::DEFAULT_ENV).is_some() {
+                    EnvFilter::from_default_env()
+                } else {
+                    "error,voicevox_core=info,voicevox_core_c_api=info,onnxruntime=info".into()
+                })
+                .with_ansi(ansi)
+                .with_writer(out)
+                .try_init()
+        } else {
+            tracing_subscriber::fmt()
+                .with_env_filter(if env::var_os(EnvFilter::DEFAULT_ENV).is_some() {
+                    EnvFilter::from_default_env()
+                } else {
+                    "error,voicevox_core=info,voicevox_core_c_api=info,onnxruntime=info".into()
+                })
+                .with_timer(local_time as fn(&mut Writer<'_>) -> _)
+                .with_ansi(ansi)
+                .with_writer(out)
+                .try_init()
+        };
     });
 
     fn local_time(wtr: &mut Writer<'_>) -> fmt::Result {

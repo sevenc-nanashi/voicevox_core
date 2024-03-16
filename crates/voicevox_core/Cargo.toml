@@ -43,11 +43,6 @@ zip = { version = "0.6.6", default-features = false, features = [
   "deflate-zlib",
 ] }
 
-[dependencies.ort]
-version = "1.16.3"
-default-features = false
-features = ["half", "copy-dylibs"]
-
 [dev-dependencies]
 heck.workspace = true
 pretty_assertions.workspace = true
@@ -65,6 +60,7 @@ windows = { version = "0.43.0", features = [
 
 [target."cfg(not(target_family = \"wasm\"))".dependencies]
 async_zip = { workspace = true, features = ["deflate"] }
+ort = { version = "1.16.3" }
 
 [lints.rust]
 unsafe_code = "deny"      # FIXME: あまり意味が無くなっているため潔く`allow`にする。あるいはunsafeを撲滅する

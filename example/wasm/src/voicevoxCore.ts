@@ -60,14 +60,14 @@ export class OpenJtalkRc {
       await fetch(dict).then((res) => res.arrayBuffer())
     );
     try {
-      vvc.FS.mkdir("/data");
-
       for (const [name, data] of Object.entries(zip.files)) {
         console.log("Extracting", name);
         if (name.endsWith("/")) {
-          vvc.FS.mkdir(`/data/${name}`);
+          vvc.FS.mkdir(`/${name}`);
         } else {
-          vvc.FS.writeFile(`/data/${name}`, await data.async("uint8array"));
+          vvc.FS.writeFile(`/${name}`, await data.async("uint8array"), {
+            flags: "w",
+          });
         }
       }
     } catch (e) {
@@ -80,7 +80,7 @@ export class OpenJtalkRc {
         "voicevox_open_jtalk_rc_new",
         "number",
         ["string", "number"],
-        ["/data/open_jtalk_dic_utf_8-1.11", returnPtr]
+        ["/open_jtalk_dic_utf_8-1.11", returnPtr]
       )
     );
     const pointer = vvc.getValue(returnPtr, "i32") as Pointer;
