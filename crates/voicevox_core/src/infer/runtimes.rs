@@ -1,6 +1,6 @@
-// #[cfg(not(target_family = "wasm"))]
-// mod onnxruntime;
-// #[cfg(target_family = "wasm")]
+#[cfg(not(target_family = "wasm"))]
+mod onnxruntime;
+#[cfg(target_family = "wasm")]
 #[path = "runtimes/onnxruntime_wasm.rs"]
 mod onnxruntime;
 

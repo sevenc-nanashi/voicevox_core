@@ -9,7 +9,7 @@ type Functions = {
   voicevox_get_version: () => string;
   voicevox_open_jtalk_rc_new: (
     path: string,
-    pointer: Pointer<"OpenJtalkRc">
+    pointer: Pointer<"OpenJtalkRc*">
   ) => VoicevoxResultCode;
   voicevox_open_jtalk_rc_delete: (
     pointer: Pointer<"OpenJtalkRc">
@@ -19,26 +19,45 @@ type Functions = {
     acceleration_mode: Pointer<"AccelerationMode">,
     cpu_num_threads: Pointer<"i32">
   ) => void;
+  voicevox_make_default_tts_options_wasm: (
+    enable_interrogative_upspeak: Pointer<"boolean">
+  ) => void;
   voicevox_synthesizer_new_wasm: (
     open_jtalk: Pointer<"OpenJtalkRc">,
-    options_acceleration_mode: i32,
-    options_cpu_num_threads: i32,
-    out_synthesizer: Pointer<"VoicevoxSynthesizer">
+    options_acceleration_mode: number,
+    options_cpu_num_threads: number,
+    out_synthesizer: Pointer<"VoicevoxSynthesizer*">
   ) => VoicevoxResultCode;
   voicevox_synthesizer_load_voice_model: (
     pointer: Pointer<"VoicevoxSynthesizer">,
     model: Pointer<"VoicevoxVoiceModel">
-  ) => VoicevoxResultCode;
+  ) => Promise<VoicevoxResultCode>;
+  voicevox_synthesizer_create_metas_json: (
+    pointer: Pointer<"VoicevoxSynthesizer">
+  ) => Pointer<"string">;
+  voicevox_synthesizer_tts: (
+    pointer: Pointer<"VoicevoxSynthesizer">,
+    text: string,
+    speaker: number,
+    options_enable_interrogative_upspeak: boolean,
+    output_wav_length: Pointer<"i32">,
+    output_wav: Pointer<"u8*">
+  ) => Promise<VoicevoxResultCode>;
   voicevox_synthesizer_delete: (
     pointer: Pointer<"VoicevoxSynthesizer">
   ) => void;
   voicevox_voice_model_new_from_path: (
     path: string,
-    pointer: Pointer<"VoicevoxVoiceModel">
+    pointer: Pointer<"VoicevoxVoiceModel*">
   ) => VoicevoxResultCode;
+  voicevox_voice_model_get_metas_json: (
+    pointer: Pointer<"VoicevoxVoiceModel">
+  ) => Pointer<"string">;
   voicevox_voice_model_delete: (
     pointer: Pointer<"VoicevoxVoiceModel">
   ) => VoicevoxResultCode;
+  voicevox_json_free: (pointer: Pointer<"string">) => void;
+  voicevox_wav_free: (pointer: Pointer<"u8">) => void;
   setenv: (name: string, value: string) => number;
 };
 type Ccall = <T extends keyof Functions>(
@@ -54,6 +73,7 @@ type VoicevoxCore = EmscriptenModule & {
   stackSave: typeof stackSave;
   stackRestore: typeof stackRestore;
   stackAlloc: typeof stackAlloc;
+  UTF8ToString: typeof UTF8ToString;
   FS: typeof FS;
 };
 export default function (): Promise<

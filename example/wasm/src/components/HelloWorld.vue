@@ -12,6 +12,7 @@ const modelLoad = async () => {
   const modelUint8Array = new Uint8Array(await modelBlob.arrayBuffer());
   const id = await VoiceModel.newFromPath(modelUint8Array);
   model.value = id;
+  console.log(await model.value.metas());
 };
 
 const synthesizerCreate = async () => {
@@ -32,8 +33,15 @@ const synthesizerTts = async () => {
   if (synthesizer.value === undefined) {
     return;
   }
-  const audio = await synthesizer.value.tts("ハローワールド");
-  audioSrc.value = "data:audio/wav;base64," + audio;
+  const audio = await synthesizer.value.tts("ハローワールド", 0);
+  audioSrc.value =
+    "data:audio/wav;base64," +
+    btoa(
+      new Uint8Array(audio).reduce(
+        (data, byte) => data + String.fromCharCode(byte),
+        ""
+      )
+    );
 };
 
 const version = ref<string | undefined>(undefined);
@@ -50,7 +58,7 @@ const audioSrc = ref<string | undefined>(undefined);
         <pre>{{ version }}</pre>
       </div>
       <div class="display">
-        <div>Model</div>
+        <div>VoiceModel</div>
         <pre>{{ model }}</pre>
       </div>
       <div class="display">
@@ -60,9 +68,13 @@ const audioSrc = ref<string | undefined>(undefined);
     </div>
     <audio controls :src="audioSrc"></audio>
     <button type="button" @click="getVersion">getVersion</button>
-    <button type="button" @click="modelLoad">Model.load</button>
+    <button type="button" @click="modelLoad">VoiceModel.load</button>
     <button type="button" @click="synthesizerCreate">Synthesizer.create</button>
-    <button type="button" @click="synthesizerLoadModel">
+    <button
+      type="button"
+      @click="synthesizerLoadModel"
+      :disabled="model === undefined || synthesizer === undefined"
+    >
       Synthesizer.loadModel
     </button>
     <button type="button" @click="synthesizerTts">Synthesizer.tts</button>

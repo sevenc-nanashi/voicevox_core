@@ -56,6 +56,15 @@ function throwIfError(vvc: VoicevoxCore, code: VoicevoxResultCode) {
 function allocPointer<T>(vvc: VoicevoxCore) {
   return vvc._malloc(4) as Pointer<T>;
 }
+function getPointerValue<T extends string>(
+  vvc: VoicevoxCore,
+  pointer: Pointer<`${T}*`>
+) {
+  return vvc.getValue(pointer, "i32") as Pointer<T>;
+}
+function utf8ToString(vvc: VoicevoxCore, pointer: Pointer<"string">) {
+  return vvc.UTF8ToString(pointer);
+}
 
 function fileExists(vvc: VoicevoxCore, path: string) {
   try {
@@ -93,7 +102,7 @@ export class OpenJtalkRc {
         }
       }
     }
-    const returnPtr = allocPointer<"OpenJtalkRc">(vvc);
+    const returnPtr = allocPointer<"OpenJtalkRc*">(vvc);
     throwIfError(
       vvc,
       vvc.ccall(
@@ -119,6 +128,7 @@ const synthesizerFinalizer = new FinalizationRegistry(
   (pointer: Pointer<"VoicevoxSynthesizer">) => {
     const vvc = _voicevoxCore;
     if (vvc) {
+      console.log("Deleting synthesizer", pointer);
       vvc.ccall("voicevox_synthesizer_delete", "void", ["number"], [pointer]);
     }
   }
@@ -136,10 +146,10 @@ export class Synthesizer {
       ["number", "number"],
       [accelerationModePtr, cpuNumThreadsPtr]
     );
-    const accelerationMode = vvc.getValue(accelerationModePtr, "i32");
+    const accelerationMode = 1; // vvc.getValue(accelerationModePtr, "i32");
     const cpuNumThreads = vvc.getValue(cpuNumThreadsPtr, "i32");
 
-    const returnPtr = allocPointer<"VoicevoxSynthesizer">(vvc);
+    const returnPtr = allocPointer<"VoicevoxSynthesizer*">(vvc);
     throwIfError(
       vvc,
       vvc.ccall(
@@ -150,10 +160,11 @@ export class Synthesizer {
       )
     );
 
-    const synthesizer = new Synthesizer(openJtalkRc, returnPtr);
+    const returnPtrValue = getPointerValue(vvc, returnPtr);
+    const synthesizer = new Synthesizer(openJtalkRc, returnPtrValue);
     console.log("Initialized Synthesizer", synthesizer);
 
-    synthesizerFinalizer.register(synthesizer, returnPtr);
+    synthesizerFinalizer.register(synthesizer, returnPtrValue);
 
     return synthesizer;
   }
@@ -166,7 +177,7 @@ export class Synthesizer {
     const vvc = await voicevoxCore();
     throwIfError(
       vvc,
-      vvc.ccall(
+      await vvc.ccall(
         "voicevox_synthesizer_load_voice_model",
         "number",
         ["number", "number"],
@@ -174,11 +185,72 @@ export class Synthesizer {
       )
     );
   }
+
+  async tts(text: string, speaker: number) {
+    const vvc = await voicevoxCore();
+    const enableInterrogativeUpspeakPtr = allocPointer<"boolean">(vvc);
+    vvc.ccall(
+      "voicevox_make_default_tts_options_wasm",
+      "void",
+      ["number"],
+      [enableInterrogativeUpspeakPtr]
+    );
+
+    const enableInterrogativeUpspeak =
+      vvc.getValue(enableInterrogativeUpspeakPtr, "i8") !== 0;
+
+    const outputWavLengthPtr = allocPointer<"i32">(vvc);
+    const outputWavPtrPtr = allocPointer<"u8*">(vvc);
+
+    throwIfError(
+      vvc,
+      await vvc.ccall(
+        "voicevox_synthesizer_tts",
+        "number",
+        ["number", "string", "number", "boolean", "number", "number"],
+        [
+          this._pointer,
+          text,
+          speaker,
+          enableInterrogativeUpspeak,
+          outputWavLengthPtr,
+          outputWavPtrPtr,
+        ]
+      )
+    );
+
+    const outputWavLength = vvc.getValue(outputWavLengthPtr, "i32");
+    const outputWavPtr = getPointerValue(vvc, outputWavPtrPtr);
+
+    const outputWavRef = new Uint8Array(
+      vvc.HEAPU8.buffer,
+      outputWavPtr,
+      outputWavLength
+    );
+    const outputWav = outputWavRef.slice();
+    vvc.ccall("voicevox_wav_free", "void", ["number"], [outputWavPtr]);
+
+    return outputWav;
+  }
+
+  async metas() {
+    const vvc = await voicevoxCore();
+    const returnPtr = vvc.ccall(
+      "voicevox_synthesizer_create_metas_json",
+      "number",
+      ["number"],
+      [this._pointer]
+    );
+    const metas = utf8ToString(vvc, returnPtr);
+    vvc.ccall("voicevox_json_free", "void", ["number"], [returnPtr]);
+    return JSON.parse(metas);
+  }
 }
 const voiceModelFinalizer = new FinalizationRegistry(
   (pointer: Pointer<"VoicevoxVoiceModel">) => {
     const vvc = _voicevoxCore;
     if (vvc) {
+      console.log("Deleting voice model", pointer);
       vvc.ccall("voicevox_voice_model_delete", "void", ["number"], [pointer]);
     }
   }
@@ -188,7 +260,7 @@ export class VoiceModel {
     const vvc = await voicevoxCore();
     const nonce = Math.floor(Math.random() * 1000000);
     vvc.FS.writeFile(`/data/voice_model_${nonce}.vvm`, model, { flags: "w" });
-    const returnPtr = allocPointer<"VoicevoxVoiceModel">(vvc);
+    const returnPtr = allocPointer<"VoicevoxVoiceModel*">(vvc);
     throwIfError(
       vvc,
       vvc.ccall(
@@ -198,14 +270,23 @@ export class VoiceModel {
         [`/data/voice_model_${nonce}.vvm`, returnPtr]
       )
     );
-    const pointer = vvc.getValue(
-      returnPtr,
-      "i32"
-    ) as Pointer<"VoicevoxVoiceModel">;
+    const pointer = getPointerValue(vvc, returnPtr);
     const voiceModel = new VoiceModel(pointer);
     console.log("Initialized VoiceModel", voiceModel);
     voiceModelFinalizer.register(voiceModel, pointer);
     return voiceModel;
   }
   constructor(public _pointer: Pointer<"VoicevoxVoiceModel">) {}
+
+  async metas() {
+    const vvc = await voicevoxCore();
+    const returnPtr = vvc.ccall(
+      "voicevox_voice_model_get_metas_json",
+      "number",
+      ["number"],
+      [this._pointer]
+    );
+    const metas = utf8ToString(vvc, returnPtr);
+    return JSON.parse(metas);
+  }
 }

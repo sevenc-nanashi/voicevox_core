@@ -21,13 +21,9 @@ fn main() {
         // println!("cargo:rustc-link-arg=-sEXPORTED_RUNTIME_METHODS=['ccall']");
         // println!("cargo:rustc-link-arg=-sEXPORT_NAME=\"RawVoicevoxCore\"");
         // println!("cargo:rustc-link-arg=-sMODULARIZE=1");
-        // println!("cargo:rustc-link-arg=-sTOTAL_STACK=128MB");
-        // println!("cargo:rustc-link-arg=-sINITIAL_MEMORY=256MB");
+        println!("cargo:rustc-link-arg=-sTOTAL_STACK=128MB");
+        println!("cargo:rustc-link-arg=-sINITIAL_MEMORY=256MB");
         println!("cargo:rustc-link-arg=-sALLOW_MEMORY_GROWTH=1");
-        println!(
-            "cargo:rustc-link-arg=--js-library={}",
-            std::env::var("CARGO_MANIFEST_DIR").unwrap() + "/wasm_library.js"
-        );
 
         let re = Regex::new(r#"pub (?:unsafe )?extern "C" fn (\w+)"#).unwrap();
         let mut functions = vec![
@@ -77,7 +73,13 @@ fn main() {
         );
         println!("cargo:rustc-link-arg=-sERROR_ON_UNDEFINED_SYMBOLS=0");
         println!("cargo:rustc-link-arg=-sEXPORT_NAME=VoicevoxCore");
-        println!("cargo:rustc-link-arg=-DEMSCRIPTEN_STANDALONE_WASM");
+        println!("cargo:rustc-link-arg=-sASYNCIFY=1");
         println!("cargo:rustc-link-arg=--no-entry");
+
+        // 本当はvoicevox_core/build.rsに置きたいけどできない（当社調べ）なのでここに置く
+        println!(
+            "cargo:rustc-link-arg=--js-library={}",
+            std::env::var("CARGO_MANIFEST_DIR").unwrap() + "/../voicevox_core/wasm_library.js"
+        );
     }
 }

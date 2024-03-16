@@ -286,6 +286,16 @@ impl<R: InferenceRuntime, D: InferenceDomain> SessionSet<R, D> {
             sessions.remove(&k.into_usize()).expect("should exist")
         })));
 
+        #[cfg(target_family = "wasm")]
+        fn check_param_infos<D: PartialEq + Display>(
+            _expected: &[ParamInfo<D>],
+            _actual: &[ParamInfo<D>],
+        ) -> anyhow::Result<()> {
+            // onnxruntime-web ではパラメータ情報を取れないので、チェックをスキップする
+            // ref: https://github.com/microsoft/onnxruntime/discussions/17682
+            Ok(())
+        }
+        #[cfg(not(target_family = "wasm"))]
         fn check_param_infos<D: PartialEq + Display>(
             expected: &[ParamInfo<D>],
             actual: &[ParamInfo<D>],
