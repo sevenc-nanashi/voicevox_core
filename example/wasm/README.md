@@ -2,8 +2,7 @@
 
 voicevox_core ライブラリ の WebAssembly バインディングを使った音声合成のサンプルコードです。
 
-1. [onnxruntime を static library としてビルドする](https://onnxruntime.ai/docs/build/web.html)
-2. 以下のスクリプトを実行する：
+1. 以下のスクリプトを実行する：
 
 ```bash
 set -eux
@@ -11,15 +10,15 @@ cargo build -p voicevox_core_c_api --target wasm32-unknown-emscripten --profile 
 cp ./target/wasm32-unknown-emscripten/web-release/voicevox_core_wasm_api.{mjs,wasm} ./example/wasm/src/artifacts/
 ```
 
-3. OpenJtalk の辞書を zip にして、`./example/wasm/public/` に配置する
+2. OpenJtalk の辞書を zip にして、`./example/wasm/public/` に配置する
 
 ```bash
 cd crates/test_util/data
 zip -r ../../../example/wasm/public/open_jtalk_dic.zip open_jtalk_dic
 ```
 
-4. sample.vvm を `./example/wasm/public/` に配置する
-5. `pnpm install` する
+3. sample.vvm を `./example/wasm/public/` に配置する
+4. `pnpm install` する
 
 ## 記録
 
