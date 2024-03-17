@@ -3,5 +3,13 @@ import vue from "@vitejs/plugin-vue";
 
 // https://vitejs.dev/config/
 export default defineConfig(async () => {
-  return { plugins: [vue()] };
+  return {
+    plugins: [vue()],
+    server: {
+      headers: {
+        "Cross-Origin-Opener-Policy": "same-origin",
+        "Cross-Origin-Embedder-Policy": "require-corp",
+      },
+    },
+  };
 });

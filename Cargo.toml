@@ -124,3 +124,9 @@ opt-level = "z"
 lto = true
 codegen-units = 1
 strip = true
+
+# https://github.com/rust-lang/cargo/issues/4897#issuecomment-1767587337
+[profile.web-release]
+inherits = "release"
+opt-level = "s"
+debug = true

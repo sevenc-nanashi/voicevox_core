@@ -7,6 +7,7 @@ addToLibrary({
       console.log("onnxruntime-web loaded");
       console.log(onnxruntime_);
       onnxruntime_.env.wasm.wasmPaths = "/node_modules/onnxruntime-web/dist/";
+      window.onnxruntime = onnxruntime_;
     });
 
     let nonce = 0;
@@ -27,21 +28,36 @@ addToLibrary({
         /** @type {number} */ model,
         /** @type {number} */ modelLen,
         /** @type {number} */ useGpu,
-        /** @type {number} */ callback
+        /** @type {number} */ callback,
       ) {
         const nonce = generateNonce();
         const modelDataRef = new Uint8Array(HEAPU8.buffer, model, modelLen);
         const modelData = modelDataRef.slice().buffer;
         (async () => {
           try {
-            const session = await onnxruntime.InferenceSession.create(
-              modelData,
-              {
-                executionProviders: useGpu
-                  ? ["webgpu", "webgl", "wasm"]
-                  : ["wasm"],
-              }
-            );
+            let session;
+            if (useGpu) {
+              console.log("onnxruntime session create with GPU");
+              session = await onnxruntime.InferenceSession.create(
+                modelData,
+                {
+                  executionProviders: ["webgpu", "webgl", "wasm"],
+                },
+              ).catch((e) => {
+                console.error("Failed to create session with GPU", e);
+                console.error(e);
+                return undefined;
+              });
+            }
+            if (!session) {
+              console.log("onnxruntime session create with WASM");
+              session = await onnxruntime.InferenceSession.create(
+                modelData,
+                {
+                  executionProviders: ["wasm"],
+                },
+              );
+            }
             sessions[nonce] = session;
             console.log("onnxruntime session created");
             console.log(session);
@@ -55,7 +71,7 @@ addToLibrary({
                 JSON.stringify({
                   type: "ok",
                   payload: result,
-                })
+                }),
               ),
             ]);
           } catch (e) {
@@ -78,7 +94,7 @@ addToLibrary({
       sessionRun(
         /** @type {number} */ sessionHandle,
         /** @type {number} */ inputs,
-        /** @type {number} */ callback
+        /** @type {number} */ callback,
       ) {
         const session = sessions[UTF8ToString(sessionHandle)];
         const inputsObj =
@@ -103,25 +119,26 @@ addToLibrary({
                       new onnxruntime.Tensor(
                         input.data.kind,
                         input.data.array,
-                        input.shape
+                        input.shape,
                       ),
-                    ])
-                  )
+                    ]),
+                  ),
                 )
               );
             console.log("onnxruntime session run result");
-            console.log(result);
+            const tensors = Object.values(result).map((tensor) => ({
+              shape: tensor.dims,
+              data: {
+                kind: tensor.type,
+                array: Object.entries(tensor.cpuData)
+                  .sort(([a], [b]) => a - b)
+                  .map(([, value]) => value),
+              },
+            }));
+            console.log(tensors);
             const resultStr = JSON.stringify({
               type: "ok",
-              payload: Object.values(result).map((tensor) => ({
-                shape: tensor.dims,
-                data: {
-                  kind: tensor.type,
-                  array: Object.entries(tensor.cpuData)
-                    .sort(([a], [b]) => a - b)
-                    .map(([, value]) => value),
-                },
-              })),
+              payload: tensors,
             });
             dynCall("vii", callback, [toCharPtr(nonce), toCharPtr(resultStr)]);
           } catch (e) {
@@ -130,7 +147,7 @@ addToLibrary({
               payload: e.message,
             };
             dynCall("vii", callback, [
-              toCharPtr(""),
+              toCharPtr(nonce),
               toCharPtr(JSON.stringify(result)),
             ]);
           }

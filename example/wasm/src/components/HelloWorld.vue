@@ -27,13 +27,17 @@ const synthesizerLoadModel = async () => {
   if (synthesizer.value === undefined) {
     return;
   }
+  const before = performance.now();
   await synthesizer.value.loadVoiceModel(model.value);
+  console.log("loadModel", performance.now() - before);
 };
 const synthesizerTts = async () => {
   if (synthesizer.value === undefined) {
     return;
   }
+  const before = performance.now();
   const audio = await synthesizer.value.tts("ハローワールド", 0);
+  console.log("tts", performance.now() - before);
   audioSrc.value =
     "data:audio/wav;base64," +
     btoa(
