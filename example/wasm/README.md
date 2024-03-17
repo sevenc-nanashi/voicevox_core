@@ -31,7 +31,7 @@ zip -r ../../../example/wasm/public/open_jtalk_dic.zip open_jtalk_dic
     - https://github.com/microsoft/onnxruntime/blob/main/js/web/docs/webgl-operators.md
   - WebGPU：
     - crates/voicevox_core/wasm_library.js の `import('onnxruntime-web')` を `import('onnxruntime-web/webgpu')` にしないと Execution Provider が認識されないので注意。
-    - [やけにアクセシビリティの低いエラーメッセージ](https://files.slack.com/files-pri/T03C4RC8V-F06PUEAE8PP/image.png)が出たりする。
+    - [やけにアクセシビリティの低いメッセージ](https://files.slack.com/files-pri/T03C4RC8V-F06PUEAE8PP/image.png)が出たりする。
     - `Conv_515` でクラッシュ。Conv1d/Conv2d しか対応してないって書いてあるけど、多分そういう問題ではない。
       - ソースは勘。
       - 多分どこかでクラッシュして、「大体クラッシュするのは Conv1d/2d 以外を呼び出したときだろ」って判断で書かれた Onnxruntime コードがそういうエラーメッセージを出してる。
