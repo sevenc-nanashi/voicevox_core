@@ -19,3 +19,4 @@ zip -r ../../../example/wasm/public/open_jtalk_dic.zip open_jtalk_dic
 ```
 
 4. sample.vvm を `./example/wasm/public/` に配置する
+5. `pnpm install` する
