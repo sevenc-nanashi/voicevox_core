@@ -7,9 +7,8 @@ voicevox_core ライブラリ の WebAssembly バインディングを使った�
 
 ```bash
 set -eux
-export ORT_LIB_LOCATION=/path/to/onnxruntime/build/Linux/Release
-cargo build -p voicevox_core_c_api --target wasm32-unknown-emscripten -r
-cp ./target/wasm32-unknown-emscripten/release/voicevox_core_wasm_api.{mjs,wasm} ./example/wasm/src/artifacts/
+cargo build -p voicevox_core_c_api --target wasm32-unknown-emscripten --profile web-release
+cp ./target/wasm32-unknown-emscripten/web-release/voicevox_core_wasm_api.{mjs,wasm} ./example/wasm/src/artifacts/
 ```
 
 3. OpenJtalk の辞書を zip にして、`./example/wasm/public/` に配置する
