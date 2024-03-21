@@ -128,5 +128,7 @@ strip = true
 # https://github.com/rust-lang/cargo/issues/4897#issuecomment-1767587337
 [profile.web-release]
 inherits = "release"
+# opt-levelをzにするとemscripten_memcpy_jsが出力されなくなり、エラーになるのでsにする
 opt-level = "s"
+# デバッグ用
 debug = true
