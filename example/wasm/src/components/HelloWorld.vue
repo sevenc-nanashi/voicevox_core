@@ -36,7 +36,7 @@ const synthesizerTts = async () => {
     return;
   }
   const before = performance.now();
-  const audio = await synthesizer.value.tts("ハローワールド", 0);
+  const audio = await synthesizer.value.tts(ttsText.value, 0);
   console.log("tts", performance.now() - before);
   audioSrc.value =
     "data:audio/wav;base64," +
@@ -47,11 +47,27 @@ const synthesizerTts = async () => {
       )
     );
 };
+const benchmark = async () => {
+  const results = [];
+  for (let j = 0; j < 5; j++) {
+    for (let i = 1; i <= 10; i++) {
+      const text = "あいうえお".repeat(i);
+      const before = performance.now();
+      await synthesizer.value?.tts(text, 0);
+      console.log("tts", 5 * i, performance.now() - before);
+      results.push({ length: 5 * i, time: performance.now() - before });
+    }
+  }
+  for (const result of results) {
+    console.log(result.length, result.time);
+  }
+};
 
 const version = ref<string | undefined>(undefined);
 const model = ref<VoiceModel | undefined>(undefined);
 const synthesizer = ref<Synthesizer | undefined>(undefined);
 const audioSrc = ref<string | undefined>(undefined);
+const ttsText = ref<string>("");
 </script>
 
 <template>
@@ -82,6 +98,8 @@ const audioSrc = ref<string | undefined>(undefined);
       Synthesizer.loadModel
     </button>
     <button type="button" @click="synthesizerTts">Synthesizer.tts</button>
+    <button type="button" @click="benchmark">Benchmark</button>
+    <input type="text" v-model="ttsText" />
   </div>
 </template>
 
