@@ -25,7 +25,7 @@ zip -r ../../../example/wasm/public/open_jtalk_dic.zip open_jtalk_dic
 - 自前ビルドした。
   - 多分高速化が1.17.1から1.18.0の間に入ってる。
 - マルチスレッドwasmで「ハローワールド」を合成するのに5.4秒くらい。
-- WebGPU/WebGLはどちらも動かない。
+- WebGPU/WebGL/WebNNはどちらも動かない。
   - WebGL は int64 非対応、なんとかバイパスしても Where に対応してないので死。
     - https://github.com/microsoft/onnxruntime/blob/main/js/web/docs/webgl-operators.md
   - WebGPU：
@@ -37,3 +37,6 @@ zip -r ../../../example/wasm/public/open_jtalk_dic.zip open_jtalk_dic
     - decode.onnx だけ[wonnx](https://github.com/webonnx/wonnx)を使うのも試したけど失敗。
       - `ai.onnx.ml` に対応してない。
         - https://github.com/webonnx/wonnx/issues/156
+  - WebNN：
+    - 前提：`about:flags`から WebNN を有効にする。
+    - numberがthrowされる謎のエラーが出る。
