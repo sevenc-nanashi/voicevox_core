@@ -194,12 +194,22 @@ pub(crate) mod blocking {
                             predict_duration_filename,
                             predict_intonation_filename,
                             decode_filename,
-                        ]
-                        .into_par_iter()
-                        .map(|filename| reader.read_vvm_entry(filename))
-                        .collect::<std::result::Result<Vec<_>, _>>()?
-                        .try_into()
-                        .unwrap_or_else(|_| panic!("should be same length"));
+                        ];
+
+                        #[cfg(not(target_family = "wasm"))]
+                        let model_bytes = model_bytes
+                            .into_par_iter()
+                            .map(|filename| reader.read_vvm_entry(filename))
+                            .collect::<std::result::Result<Vec<_>, _>>()?
+                            .try_into()
+                            .unwrap_or_else(|_| panic!("should be same length"));
+                        #[cfg(target_family = "wasm")]
+                        let model_bytes = model_bytes
+                            .into_iter()
+                            .map(|filename| reader.read_vvm_entry(filename))
+                            .collect::<std::result::Result<Vec<_>, _>>()?
+                            .try_into()
+                            .unwrap_or_else(|_| panic!("should be same length"));
 
                         let model_bytes = EnumMap::from_array(model_bytes);
 

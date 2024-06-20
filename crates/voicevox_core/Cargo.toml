@@ -28,7 +28,7 @@ ndarray.workspace = true
 once_cell.workspace = true
 open_jtalk.workspace = true
 ouroboros.workspace = true
-rayon.workspace = true
+rayon = { workspace = true, features = ["web_spin_lock"] }
 regex.workspace = true
 serde = { workspace = true, features = ["derive", "rc"] }
 serde_json = { workspace = true, features = ["preserve_order"] }

@@ -16,24 +16,22 @@ const voicevoxCore = (): Promise<VoicevoxCore> => {
   });
 };
 raw().then((vvc) => {
-  vvc.ready.then(() => {
-    console.log("VoicevoxCore is ready");
-    console.log(vvc);
-    _voicevoxCore = vvc;
-    vvc.ccall(
-      "setenv",
-      "number",
-      ["string", "string"],
-      ["RUST_BACKTRACE", "full"]
-    );
+  console.log("VoicevoxCore is ready");
+  console.log(vvc);
+  _voicevoxCore = vvc;
+  vvc.ccall(
+    "setenv",
+    "number",
+    ["string", "string"],
+    ["RUST_BACKTRACE", "full"],
+  );
 
-    vvc.FS.mkdir("/data");
-    // @ts-ignore
-    window.vvc = vvc;
-    for (const resolve of resolvers) {
-      resolve(vvc);
-    }
-  });
+  vvc.FS.mkdir("/data");
+  // @ts-ignore
+  window.vvc = vvc;
+  for (const resolve of resolvers) {
+    resolve(vvc);
+  }
 });
 
 export async function getVersion() {
@@ -47,7 +45,7 @@ function throwIfError(vvc: VoicevoxCore, code: VoicevoxResultCode) {
       "voicevox_error_result_to_message",
       "string",
       ["number"],
-      [code]
+      [code],
     );
     throw new Error(`VoicevoxCore error: ${message}`);
   }
@@ -58,7 +56,7 @@ function allocPointer<T>(vvc: VoicevoxCore) {
 }
 function getPointerValue<T extends string>(
   vvc: VoicevoxCore,
-  pointer: Pointer<`${T}*`>
+  pointer: Pointer<`${T}*`>,
 ) {
   return vvc.getValue(pointer, "i32") as Pointer<T>;
 }
@@ -81,14 +79,14 @@ const openJtalkFinalizer = new FinalizationRegistry(
     if (vvc) {
       vvc.ccall("voicevox_open_jtalk_rc_delete", "void", ["number"], [pointer]);
     }
-  }
+  },
 );
 
 export class OpenJtalkRc {
   static async new() {
     const vvc = await voicevoxCore();
     const zip = await JSZip.loadAsync(
-      await fetch("/open_jtalk_dic.zip").then((res) => res.arrayBuffer())
+      await fetch("/open_jtalk_dic.zip").then((res) => res.arrayBuffer()),
     );
     if (!fileExists(vvc, "/data/open_jtalk_dic_utf_8-1.11/")) {
       for (const [name, data] of Object.entries(zip.files)) {
@@ -109,8 +107,8 @@ export class OpenJtalkRc {
         "voicevox_open_jtalk_rc_new",
         "number",
         ["string", "number"],
-        ["/data/open_jtalk_dic_utf_8-1.11", returnPtr]
-      )
+        ["/data/open_jtalk_dic_utf_8-1.11", returnPtr],
+      ),
     );
     const pointer = vvc.getValue(returnPtr, "i32") as Pointer<"OpenJtalkRc">;
 
@@ -131,7 +129,7 @@ const synthesizerFinalizer = new FinalizationRegistry(
       console.log("Deleting synthesizer", pointer);
       vvc.ccall("voicevox_synthesizer_delete", "void", ["number"], [pointer]);
     }
-  }
+  },
 );
 
 export class Synthesizer {
@@ -144,10 +142,10 @@ export class Synthesizer {
       "voicevox_make_default_initialize_options_wasm",
       "void",
       ["number", "number"],
-      [accelerationModePtr, cpuNumThreadsPtr]
+      [accelerationModePtr, cpuNumThreadsPtr],
     );
     // const accelerationMode = vvc.getValue(accelerationModePtr, "i32");
-    const accelerationMode = 1
+    const accelerationMode = 2;
     const cpuNumThreads = vvc.getValue(cpuNumThreadsPtr, "i32");
 
     const returnPtr = allocPointer<"VoicevoxSynthesizer*">(vvc);
@@ -157,8 +155,8 @@ export class Synthesizer {
         "voicevox_synthesizer_new_wasm",
         "number",
         ["number", "number", "number", "number"],
-        [openJtalkRc._pointer, accelerationMode, cpuNumThreads, returnPtr]
-      )
+        [openJtalkRc._pointer, accelerationMode, cpuNumThreads, returnPtr],
+      ),
     );
 
     const returnPtrValue = getPointerValue(vvc, returnPtr);
@@ -171,7 +169,7 @@ export class Synthesizer {
   }
   constructor(
     private openJtalkRc: OpenJtalkRc,
-    public _pointer: Pointer<"VoicevoxSynthesizer">
+    public _pointer: Pointer<"VoicevoxSynthesizer">,
   ) {}
 
   async loadVoiceModel(model: VoiceModel) {
@@ -182,8 +180,8 @@ export class Synthesizer {
         "voicevox_synthesizer_load_voice_model",
         "number",
         ["number", "number"],
-        [this._pointer, model._pointer]
-      )
+        [this._pointer, model._pointer],
+      ),
     );
   }
 
@@ -194,7 +192,7 @@ export class Synthesizer {
       "voicevox_make_default_tts_options_wasm",
       "void",
       ["number"],
-      [enableInterrogativeUpspeakPtr]
+      [enableInterrogativeUpspeakPtr],
     );
 
     const enableInterrogativeUpspeak =
@@ -216,8 +214,8 @@ export class Synthesizer {
           enableInterrogativeUpspeak,
           outputWavLengthPtr,
           outputWavPtrPtr,
-        ]
-      )
+        ],
+      ),
     );
 
     const outputWavLength = vvc.getValue(outputWavLengthPtr, "i32");
@@ -226,7 +224,7 @@ export class Synthesizer {
     const outputWavRef = new Uint8Array(
       vvc.HEAPU8.buffer,
       outputWavPtr,
-      outputWavLength
+      outputWavLength,
     );
     const outputWav = outputWavRef.slice();
     vvc.ccall("voicevox_wav_free", "void", ["number"], [outputWavPtr]);
@@ -240,7 +238,7 @@ export class Synthesizer {
       "voicevox_synthesizer_create_metas_json",
       "number",
       ["number"],
-      [this._pointer]
+      [this._pointer],
     );
     const metas = utf8ToString(vvc, returnPtr);
     vvc.ccall("voicevox_json_free", "void", ["number"], [returnPtr]);
@@ -254,7 +252,7 @@ const voiceModelFinalizer = new FinalizationRegistry(
       console.log("Deleting voice model", pointer);
       vvc.ccall("voicevox_voice_model_delete", "void", ["number"], [pointer]);
     }
-  }
+  },
 );
 export class VoiceModel {
   static async newFromPath(model: Uint8Array) {
@@ -268,8 +266,8 @@ export class VoiceModel {
         "voicevox_voice_model_new_from_path",
         "number",
         ["string", "number"],
-        [`/data/voice_model_${nonce}.vvm`, returnPtr]
-      )
+        [`/data/voice_model_${nonce}.vvm`, returnPtr],
+      ),
     );
     const pointer = getPointerValue(vvc, returnPtr);
     const voiceModel = new VoiceModel(pointer);
@@ -285,7 +283,7 @@ export class VoiceModel {
       "voicevox_voice_model_get_metas_json",
       "number",
       ["number"],
-      [this._pointer]
+      [this._pointer],
     );
     const metas = utf8ToString(vvc, returnPtr);
     return JSON.parse(metas);

@@ -2,7 +2,7 @@ addToLibrary({
   $onnxruntime_injection__postset: "onnxruntime_injection();",
   $onnxruntime_injection: function () {
     let onnxruntime;
-    import("onnxruntime-web").then((onnxruntime_) => {
+    import("onnxruntime-web/webgpu").then((onnxruntime_) => {
       onnxruntime = onnxruntime_;
       console.log("onnxruntime-web loaded");
       console.log(onnxruntime_);
@@ -38,12 +38,9 @@ addToLibrary({
             let session;
             if (useGpu) {
               console.log("onnxruntime session create with GPU");
-              session = await onnxruntime.InferenceSession.create(
-                modelData,
-                {
-                  executionProviders: ["webgpu", "webgl", "wasm"],
-                },
-              ).catch((e) => {
+              session = await onnxruntime.InferenceSession.create(modelData, {
+                executionProviders: ["webnn", "webgpu", "webgl", "wasm"],
+              }).catch((e) => {
                 console.error("Failed to create session with GPU", e);
                 console.error(e);
                 return undefined;
@@ -51,12 +48,9 @@ addToLibrary({
             }
             if (!session) {
               console.log("onnxruntime session create with WASM");
-              session = await onnxruntime.InferenceSession.create(
-                modelData,
-                {
-                  executionProviders: ["wasm"],
-                },
-              );
+              session = await onnxruntime.InferenceSession.create(modelData, {
+                executionProviders: ["wasm"],
+              });
             }
             sessions[nonce] = session;
             console.log("onnxruntime session created");
@@ -77,7 +71,7 @@ addToLibrary({
           } catch (e) {
             const result = {
               type: "err",
-              payload: e.message,
+              payload: String(e),
             };
             dynCall("vii", callback, [
               toCharPtr(nonce),
