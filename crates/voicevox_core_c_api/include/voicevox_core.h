@@ -143,6 +143,10 @@ enum VoicevoxResultCode
    */
   VOICEVOX_RESULT_READ_ZIP_ENTRY_ERROR = 17,
   /**
+   * モデルの形式が不正
+   */
+  VOICEVOX_RESULT_INVALID_MODEL_HEADER_ERROR = 28,
+  /**
    * すでに読み込まれている音声モデルを読み込もうとした
    */
   VOICEVOX_RESULT_MODEL_ALREADY_LOADED_ERROR = 18,
@@ -273,7 +277,7 @@ typedef struct VoicevoxInitializeOptions {
 /**
  * 音声モデルID。
  */
-typedef const char *VoicevoxVoiceModelId;
+typedef const uint8_t (*VoicevoxVoiceModelId)[16];
 
 /**
  * スタイルID。
@@ -550,7 +554,7 @@ VoicevoxResultCode voicevox_synthesizer_load_voice_model(const struct VoicevoxSy
  *
  * \safety{
  * - `synthesizer`は ::voicevox_synthesizer_new で得たものでなければならず、また ::voicevox_synthesizer_delete で解放されていてはいけない。
- * - `model_id`はヌル終端文字列を指し、かつ<a href="#voicevox-core-safety">読み込みについて有効</a>でなければならない。
+ * - `model_id`は<a href="#voicevox-core-safety">読み込みについて有効</a>でなければならない。
  * }
  */
 #ifdef _WIN32
@@ -585,7 +589,7 @@ bool voicevox_synthesizer_is_gpu_mode(const struct VoicevoxSynthesizer *synthesi
  *
  * \safety{
  * - `synthesizer`は ::voicevox_synthesizer_new で得たものでなければならず、また ::voicevox_synthesizer_delete で解放されていてはいけない。
- * - `model_id`はヌル終端文字列を指し、かつ<a href="#voicevox-core-safety">読み込みについて有効</a>でなければならない。
+ * - `model_id`は<a href="#voicevox-core-safety">読み込みについて有効</a>でなければならない。
  * }
  */
 #ifdef _WIN32

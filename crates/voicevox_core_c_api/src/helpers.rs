@@ -1,5 +1,7 @@
+use easy_ext::ext;
 use std::{error::Error as _, ffi::CStr, fmt::Debug, iter};
-use voicevox_core::{AudioQueryModel, UserDictWord};
+use uuid::Uuid;
+use voicevox_core::{AudioQueryModel, UserDictWord, VoiceModelId};
 
 use thiserror::Error;
 use tracing::error;
@@ -37,6 +39,7 @@ pub(crate) fn into_result_code_with_error(result: CApiResult<()>) -> VoicevoxRes
                 GpuSupport => VOICEVOX_RESULT_GPU_SUPPORT_ERROR,
                 OpenZipFile => VOICEVOX_RESULT_OPEN_ZIP_FILE_ERROR,
                 ReadZipEntry => VOICEVOX_RESULT_READ_ZIP_ENTRY_ERROR,
+                InvalidModelFormat => VOICEVOX_RESULT_INVALID_MODEL_HEADER_ERROR,
                 ModelAlreadyLoaded => VOICEVOX_RESULT_MODEL_ALREADY_LOADED_ERROR,
                 StyleAlreadyLoaded => VOICEVOX_RESULT_STYLE_ALREADY_LOADED_ERROR,
                 InvalidModelData => VOICEVOX_RESULT_INVALID_MODEL_DATA_ERROR,
@@ -159,6 +162,13 @@ impl Default for VoicevoxSynthesisOptions {
         Self {
             enable_interrogative_upspeak: options.enable_interrogative_upspeak,
         }
+    }
+}
+
+#[ext(UuidBytesExt)]
+pub(crate) impl uuid::Bytes {
+    fn to_model_id(self) -> VoiceModelId {
+        Uuid::from_bytes(self).into()
     }
 }
 

@@ -14,7 +14,7 @@ mod wasm;
 use self::drop_check::C_STRING_DROP_CHECKER;
 use self::helpers::{
     accent_phrases_to_json, audio_query_model_to_json, ensure_utf8, into_result_code_with_error,
-    CApiError,
+    CApiError, UuidBytesExt as _,
 };
 use self::result_code::VoicevoxResultCode;
 use self::slice_owner::U8_SLICE_OWNER;
@@ -32,7 +32,8 @@ use std::sync::{Arc, Once};
 use tracing_subscriber::fmt::format::Writer;
 use tracing_subscriber::EnvFilter;
 use uuid::Uuid;
-use voicevox_core::{AccentPhraseModel, AudioQueryModel, TtsOptions, UserDictWord, VoiceModelId};
+use voicevox_core::__internal::interop::IdRef as _;
+use voicevox_core::{AccentPhraseModel, AudioQueryModel, TtsOptions, UserDictWord};
 use voicevox_core::{StyleId, SupportedDevices, SynthesisOptions};
 
 fn init_logger_once() {
@@ -61,7 +62,13 @@ fn init_logger_once() {
             .with_env_filter(if env::var_os(EnvFilter::DEFAULT_ENV).is_some() {
                 EnvFilter::from_default_env()
             } else {
-                "error,voicevox_core=info,voicevox_core_c_api=info,onnxruntime=info".into()
+                pub const ORT_LOGGING_LEVEL: &str = if cfg!(debug_assertions) {
+                    "info"
+                } else {
+                    "warn"
+                };
+                format!("error,voicevox_core=info,voicevox_core_c_api=info,ort={ORT_LOGGING_LEVEL}")
+                    .into()
             })
             .with_timer(local_time as fn(&mut Writer<'_>) -> _)
             .with_ansi(ansi)
@@ -234,12 +241,11 @@ pub extern "C" fn voicevox_get_version() -> *const c_char {
 #[derive(Getters)]
 pub struct VoicevoxVoiceModel {
     model: voicevox_core::blocking::VoiceModel,
-    id: CString,
     metas: CString,
 }
 
 /// 音声モデルID。
-pub type VoicevoxVoiceModelId = *const c_char;
+pub type VoicevoxVoiceModelId<'a> = &'a [u8; 16];
 
 /// スタイルID。
 ///
@@ -281,9 +287,9 @@ pub unsafe extern "C" fn voicevox_voice_model_new_from_path(
 /// - `model`は ::voicevox_voice_model_new_from_path で得たものでなければならず、また ::voicevox_voice_model_delete で解放されていてはいけない。
 /// }
 #[no_mangle]
-pub extern "C" fn voicevox_voice_model_id(model: &VoicevoxVoiceModel) -> VoicevoxVoiceModelId {
+pub extern "C" fn voicevox_voice_model_id(model: &VoicevoxVoiceModel) -> VoicevoxVoiceModelId<'_> {
     init_logger_once();
-    model.id().as_ptr()
+    model.model.id_ref().raw_voice_model_id().as_bytes()
 }
 
 /// ::VoicevoxVoiceModel からメタ情報を取得する。
@@ -395,20 +401,16 @@ pub extern "C" fn voicevox_synthesizer_load_voice_model(
 ///
 /// \safety{
 /// - `synthesizer`は ::voicevox_synthesizer_new で得たものでなければならず、また ::voicevox_synthesizer_delete で解放されていてはいけない。
-/// - `model_id`はヌル終端文字列を指し、かつ<a href="#voicevox-core-safety">読み込みについて有効</a>でなければならない。
+/// - `model_id`は<a href="#voicevox-core-safety">読み込みについて有効</a>でなければならない。
 /// }
 #[no_mangle]
-pub unsafe extern "C" fn voicevox_synthesizer_unload_voice_model(
+pub extern "C" fn voicevox_synthesizer_unload_voice_model(
     synthesizer: &VoicevoxSynthesizer,
-    model_id: VoicevoxVoiceModelId,
+    model_id: VoicevoxVoiceModelId<'_>,
 ) -> VoicevoxResultCode {
     init_logger_once();
-    into_result_code_with_error((|| {
-        let raw_model_id = ensure_utf8(unsafe { CStr::from_ptr(model_id) })?;
-        synthesizer
-            .unload_voice_model(&VoiceModelId::new(raw_model_id.to_string()))
-            .map_err(Into::into)
-    })())
+    let model_id = model_id.to_model_id();
+    into_result_code_with_error(synthesizer.unload_voice_model(model_id).map_err(Into::into))
 }
 
 /// ハードウェアアクセラレーションがGPUモードか判定する。
@@ -435,21 +437,16 @@ pub extern "C" fn voicevox_synthesizer_is_gpu_mode(synthesizer: &VoicevoxSynthes
 ///
 /// \safety{
 /// - `synthesizer`は ::voicevox_synthesizer_new で得たものでなければならず、また ::voicevox_synthesizer_delete で解放されていてはいけない。
-/// - `model_id`はヌル終端文字列を指し、かつ<a href="#voicevox-core-safety">読み込みについて有効</a>でなければならない。
+/// - `model_id`は<a href="#voicevox-core-safety">読み込みについて有効</a>でなければならない。
 /// }
 #[no_mangle]
-pub unsafe extern "C" fn voicevox_synthesizer_is_loaded_voice_model(
+pub extern "C" fn voicevox_synthesizer_is_loaded_voice_model(
     synthesizer: &VoicevoxSynthesizer,
-    model_id: VoicevoxVoiceModelId,
+    model_id: VoicevoxVoiceModelId<'_>,
 ) -> bool {
     init_logger_once();
-    let Ok(raw_model_id) = ensure_utf8(unsafe { CStr::from_ptr(model_id) }) else {
-        // 与えられたIDがUTF-8ではない場合、それに対応する`VoicdModel`は確実に存在しない
-        return false;
-    };
-    synthesizer
-        .synthesizer()
-        .is_loaded_voice_model(&VoiceModelId::new(raw_model_id.into()))
+    let model_id = model_id.to_model_id();
+    synthesizer.synthesizer().is_loaded_voice_model(model_id)
 }
 
 /// 今読み込んでいる音声モデルのメタ情報を、JSONで取得する。
@@ -1166,7 +1163,7 @@ pub unsafe extern "C" fn voicevox_user_dict_add_word(
     into_result_code_with_error((|| {
         let word = word.read_unaligned().try_into_word()?;
         let uuid = user_dict.dict.add_word(word)?;
-        output_word_uuid.as_ptr().copy_from(uuid.as_bytes(), 16);
+        output_word_uuid.as_ptr().write_unaligned(uuid.into_bytes());
 
         Ok(())
     })())

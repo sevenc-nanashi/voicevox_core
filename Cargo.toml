@@ -8,8 +8,8 @@ anstream = { version = "0.5.0", default-features = false }
 anstyle-query = "1.0.0"
 anyhow = "1.0.65"
 assert_cmd = "2.0.8"
-async-std = "1.12.0"
 async_zip = "=0.0.16"
+bindgen = "0.69.4"
 binstall-tar = "0.4.39"
 bytes = "1.1.0"
 camino = "1.1.6"
@@ -18,7 +18,7 @@ chrono = { version = "0.4.26", default-features = false }
 clap = "4.0.10"
 color-eyre = "0.6.2"
 colorchoice = "1.0.0"
-cstr = "0.2.11"
+cstr = "0.2.11" # https://github.com/dtolnay/syn/issues/1502
 derive-getters = "0.2.0"
 derive-new = "0.5.9"
 derive_more = "0.99.17"
@@ -38,6 +38,7 @@ heck = "0.4.1"
 humansize = "2.1.2"
 indexmap = "2.0.0"
 indicatif = "0.17.3"
+indoc = "2.0.4"
 inventory = "0.3.4"
 itertools = "0.10.5"
 jlabel = "0.1.2"
@@ -46,7 +47,6 @@ libc = "0.2.134"
 libloading = "0.7.3"
 libtest-mimic = "0.6.0"
 log = "0.4.17"
-nanoid = "0.4.0"
 ndarray = "0.15.6"
 ndarray-stats = "0.5.1"
 octocrab = { version = "0.19.0", default-features = false }
@@ -69,7 +69,6 @@ serde_json = "1.0.85"
 serde_with = "3.3.0"
 smallvec = "1.13.1"
 strum = "0.24.1"
-surf = "2.3.2"
 syn = "2.0.38"
 tar = "0.4.38"
 tempfile = "3.6.0"
@@ -81,23 +80,21 @@ tracing = "0.1.37"
 tracing-subscriber = "0.3.16"
 typetag = "0.2.5"
 url = "2.3.0"
-uuid = "1.4.0"
+uuid = "1.6.1"
 voicevox_core = { path = "crates/voicevox_core" }
 windows = "0.43.0"
 zip = "0.6.3"
 
-[workspace.dependencies.onnxruntime]
-git = "https://github.com/VOICEVOX/onnxruntime-rs.git"
-rev = "ebb9dcb9b26ee681889b52b6db3b4f642b04a250"
+[workspace.dependencies.voicevox-ort]
+git = "https://github.com/VOICEVOX/ort.git"
+rev = "a2d6ae22327869e896bf4c16828734d09516d2d9"
 
 [workspace.dependencies.open_jtalk]
 # git = "https://github.com/VOICEVOX/open_jtalk-rs.git"
-# rev = "70c76bb54522830e92803038191bf533ba68ce85"
+# rev = "e1940f3fd61a48bed5bbec8cd2645e13923b1f80"
 
-# git = "https://github.com/sevenc-nanashi/open_jtalk-rs.git"
-# branch = "add/wasm"
-
-path = "../open_jtalk-rs/crates/open_jtalk"
+git = "https://github.com/sevenc-nanashi/open_jtalk-rs.git"
+branch = "add/wasm"
 
 # FIXME: iOS対応のpull request(https://github.com/wesleywiser/process_path/pull/16)がマージされる見込みが無いため
 [workspace.dependencies.process_path]

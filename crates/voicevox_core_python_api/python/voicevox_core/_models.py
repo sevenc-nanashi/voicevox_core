@@ -1,6 +1,7 @@
 import dataclasses
 from enum import Enum
 from typing import List, NewType, Optional
+from uuid import UUID
 
 import pydantic
 
@@ -24,14 +25,21 @@ Parameters
 x : str
 """
 
-VoiceModelId = NewType("VoiceModelId", str)
+VoiceModelId = NewType("VoiceModelId", UUID)
 """
 音声モデルID。
 
 Parameters
 ----------
-x : str
+x : UUID
 """
+
+
+class StyleType(str, Enum):
+    """**スタイル** (_style_)に対応するモデルの種類。"""
+
+    TALK = "talk"
+    """音声合成クエリの作成と音声合成が可能。"""
 
 
 @pydantic.dataclasses.dataclass
@@ -43,6 +51,9 @@ class StyleMeta:
 
     id: StyleId
     """スタイルID。"""
+
+    type: StyleType = dataclasses.field(default=StyleType.TALK)
+    """スタイルに対応するモデルの種類。"""
 
     order: Optional[int] = None
     """

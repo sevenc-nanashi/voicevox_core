@@ -58,7 +58,6 @@ jobs:
               "target": "x86_64-pc-windows-msvc",
               "artifact_name": "windows-x64-cpu",
               "whl_local_version": "cpu",
-              "use_cuda": false,
               "can_skip_in_simple_test": true
             },
             {
@@ -67,16 +66,14 @@ jobs:
               "target": "x86_64-pc-windows-msvc",
               "artifact_name": "windows-x64-directml",
               "whl_local_version": "directml",
-              "use_cuda": false,
               "can_skip_in_simple_test": false
             },
             {
               "os": "windows-2019",
-              "features": "",
+              "features": "cuda",
               "target": "x86_64-pc-windows-msvc",
               "artifact_name": "windows-x64-cuda",
               "whl_local_version": "cuda",
-              "use_cuda": true,
               "can_skip_in_simple_test": true
             },
             {
@@ -85,7 +82,6 @@ jobs:
               "target": "i686-pc-windows-msvc",
               "artifact_name": "windows-x86-cpu",
               "whl_local_version": "cpu",
-              "use_cuda": false,
               "can_skip_in_simple_test": true
             },
             {
@@ -94,16 +90,14 @@ jobs:
               "target": "x86_64-unknown-linux-gnu",
               "artifact_name": "linux-x64-cpu",
               "whl_local_version": "cpu",
-              "use_cuda": false,
               "can_skip_in_simple_test": true
             },
             {
               "os": "ubuntu-20.04",
-              "features": "",
+              "features": "cuda",
               "target": "x86_64-unknown-linux-gnu",
               "artifact_name": "linux-x64-gpu",
               "whl_local_version": "cuda",
-              "use_cuda": true,
               "can_skip_in_simple_test": false
             },
             {
@@ -112,7 +106,6 @@ jobs:
               "target": "aarch64-unknown-linux-gnu",
               "artifact_name": "linux-arm64-cpu",
               "whl_local_version": "cpu",
-              "use_cuda": false,
               "can_skip_in_simple_test": true
             },
             {
@@ -120,7 +113,6 @@ jobs:
               "features": "",
               "target": "aarch64-linux-android",
               "artifact_name": "android-arm64-cpu",
-              "use_cuda": false,
               "can_skip_in_simple_test": true
             },
             {
@@ -128,7 +120,6 @@ jobs:
               "features": "",
               "target": "x86_64-linux-android",
               "artifact_name": "android-x86_64-cpu",
-              "use_cuda": false,
               "can_skip_in_simple_test": true
             },
             {
@@ -137,7 +128,6 @@ jobs:
               "target": "aarch64-apple-darwin",
               "artifact_name": "osx-arm64-cpu",
               "whl_local_version": "cpu",
-              "use_cuda": false,
               "can_skip_in_simple_test": false
             },
             {
@@ -146,7 +136,6 @@ jobs:
               "target": "x86_64-apple-darwin",
               "artifact_name": "osx-x64-cpu",
               "whl_local_version": "cpu",
-              "use_cuda": false,
               "can_skip_in_simple_test": true
             },
             {
@@ -154,7 +143,6 @@ jobs:
               "features": "",
               "target": "aarch64-apple-ios",
               "artifact_name": "ios-arm64-cpu",
-              "use_cuda": false,
               "can_skip_in_simple_test": true
             },
             {
@@ -162,7 +150,6 @@ jobs:
               "features": "",
               "target": "aarch64-apple-ios-sim",
               "artifact_name": "ios-arm64-cpu-sim",
-              "use_cuda": false,
               "can_skip_in_simple_test": true
             },
             {
@@ -170,7 +157,6 @@ jobs:
               "features": "",
               "target": "x86_64-apple-ios",
               "artifact_name": "ios-x64-cpu",
-              "use_cuda": false,
               "can_skip_in_simple_test": true
             }
           ]'
@@ -192,9 +178,9 @@ jobs:
     env:
       ASSET_NAME: voicevox_core-${{ matrix.artifact_name }}-${{ needs.config.outputs.version }}
     steps:
-      - uses: actions/checkout@v3 # 製品版ではない場合
+      - uses: actions/checkout@v4 # 製品版ではない場合
         if: ${{ !inputs.is_production }}
-      - uses: actions/checkout@v3 # 製品版の場合
+      - uses: actions/checkout@v4 # 製品版の場合
         if: inputs.is_production
         with:
           fetch-depth: 0 # 全履歴取得
@@ -210,7 +196,7 @@ jobs:
           ) > /dev/null 2>&1
       - name: Set up Python 3.8
         if: matrix.whl_local_version
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: "3.8"
           architecture: ${{ contains(matrix.artifact_name,'x86') && 'x86' || 'x64' }}
@@ -234,7 +220,7 @@ jobs:
           echo "AR_${{ matrix.target }}=llvm-ar" >> "$GITHUB_ENV"
       - name: Checkout VOICEVOX RESOURCE
         if: inputs.is_production
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: VOICEVOX/voicevox_resource
           ref: ${{ env.VOICEVOX_RESOURCE_VERSION }}
@@ -268,7 +254,6 @@ jobs:
           fi
         env:
           RUSTFLAGS: -C panic=abort
-          ORT_USE_CUDA: ${{ matrix.use_cuda }}
       - name: build voicevox_core_python_api
         if: matrix.whl_local_version
         id: build-voicevox-core-python-api
@@ -286,8 +271,6 @@ jobs:
             build > /dev/null 2>&1
           fi
           echo "whl=$(find ./target/wheels -type f)" >> "$GITHUB_OUTPUT"
-        env:
-          ORT_USE_CUDA: ${{ matrix.use_cuda }}
       - name: build voicevox_core_java_api
         if: contains(matrix.target, 'android')
         run: |
@@ -305,7 +288,7 @@ jobs:
           cp -v crates/voicevox_core_c_api/include/voicevox_core.h "artifact/${{ env.ASSET_NAME }}"
           cp -v target/${{ matrix.target }}/release/*voicevox_core.{dll,so,dylib} "artifact/${{ env.ASSET_NAME }}" || true
           cp -v target/${{ matrix.target }}/release/voicevox_core.dll.lib "artifact/${{ env.ASSET_NAME }}/voicevox_core.lib" || true
-          cp -v -n target/${{ matrix.target }}/release/build/onnxruntime-sys-*/out/onnxruntime_*/onnxruntime-*/lib/*.{dll,so.*,so,dylib} "artifact/${{ env.ASSET_NAME }}" || true
+          cp -v -n target/${{ matrix.target }}/release/{,lib}onnxruntime*.{dll,so.*,so,dylib} "artifact/${{ env.ASSET_NAME }}" || true
           # libonnxruntimeについてはバージョン付のshared libraryを使用するためバージョンがついてないものを削除する
           rm -f artifact/${{ env.ASSET_NAME }}/libonnxruntime.{so,dylib}
           cp -v README.md "artifact/${{ env.ASSET_NAME }}/README.txt"
@@ -323,7 +306,7 @@ jobs:
           ESIGNERCKA_TOTP_SECRET: ${{ secrets.ESIGNERCKA_TOTP_SECRET }}
       - name: Upload artifact to build XCFramework
         if: contains(matrix.target, 'ios')
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: voicevox_core-${{ matrix.target }}
           path: artifact/${{ env.ASSET_NAME }}
@@ -333,7 +316,7 @@ jobs:
           7z a "../${{ env.ASSET_NAME }}.zip" "${{ env.ASSET_NAME }}"
       - name: Upload to Release
         if: fromJson(needs.config.outputs.deploy) && !contains(matrix.target, 'ios')
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           prerelease: true
           tag_name: ${{ env.VERSION }}
@@ -342,7 +325,7 @@ jobs:
           target_commitish: ${{ github.sha }}
       - name: Upload Python whl to Release
         if: fromJson(needs.config.outputs.deploy) && matrix.whl_local_version
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           prerelease: true
           tag_name: ${{ env.VERSION }}
@@ -351,7 +334,7 @@ jobs:
           target_commitish: ${{ github.sha }}
       - name: Upload voicevox_core_java_api artifact
         if: fromJson(needs.config.outputs.deploy) && contains(matrix.target, 'android')
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: voicevox_core_java_api-${{ matrix.artifact_name }}
           path: java_artifact
@@ -366,24 +349,24 @@ jobs:
       IOS_AARCH64_PATH: artifact/voicevox_core-aarch64-apple-ios
       ASSET_NAME: voicevox_core-ios-xcframework-cpu-${{ needs.config.outputs.version }}
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/download-artifact@v2
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
         with:
           name: voicevox_core-x86_64-apple-ios
           path: ${{ env.IOS_X86_64_PATH }}
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v4
         with:
           name: voicevox_core-aarch64-apple-ios-sim
           path: ${{ env.IOS_AARCH64_SIM_PATH }}
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v4
         with:
           name: voicevox_core-aarch64-apple-ios
           path: ${{ env.IOS_AARCH64_PATH }}
       - name: Create xcframework
-        id: create-xcframework 
+        id: create-xcframework
         run: |
           build_util/make_ios_xcframework.bash
-          echo "output_asset_path=${OUTPUT_ASSET_PATH}" >> "$GITHUB_OUTPUT" 
+          echo "output_asset_path=${OUTPUT_ASSET_PATH}" >> "$GITHUB_OUTPUT"
         env:
           OUTPUT_ASSET_PATH: artifact/voicevox_core-ios-xcframework-cpu
       - name: Archive artifact
@@ -392,7 +375,7 @@ jobs:
           7z a "../../${{ env.ASSET_NAME }}.zip" "voicevox_core.xcframework"
       - name: Upload to Release
         if: fromJson(needs.config.outputs.deploy)
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           prerelease: true
           tag_name: ${{ env.VERSION }}
@@ -406,10 +389,10 @@ jobs:
     env:
       ASSET_NAME: model-${{ needs.config.outputs.version }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Checkout VOICEVOX FAT RESOURCE
         if: inputs.is_production
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           repository: VOICEVOX/voicevox_fat_resource
           ref: ${{ env.VOICEVOX_FAT_RESOURCE_VERSION }}
@@ -429,7 +412,7 @@ jobs:
           7z a "../${{ env.ASSET_NAME }}.zip" "${{ env.ASSET_NAME }}"
       - name: Upload to Release
         if: fromJson(needs.config.outputs.deploy)
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           prerelease: true
           tag_name: ${{ env.VERSION }}
@@ -442,11 +425,11 @@ jobs:
     if: ${{ !(github.event_name != 'release' && github.event_name != 'workflow_dispatch') }} # !env.IS_SIMPLE_TEST と同じ
     needs: [config, build_and_deploy]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Set up Rust
         uses: ./.github/actions/rust-toolchain-from-file
       - name: Set up Java
-        uses: actions/setup-java@v2
+        uses: actions/setup-java@v4
         with:
           java-version: "17"
           distribution: "adopt"
@@ -463,13 +446,13 @@ jobs:
           cargo set-version "$VERSION" -p voicevox_core_java_api
 
       - name: "Download artifact (android-arm64-cpu)"
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: voicevox_core_java_api-android-arm64-cpu
           path: artifact/android-arm64-cpu
 
       - name: "Download artifact (android-x86_64-cpu)"
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: voicevox_core_java_api-android-x86_64-cpu
           path: artifact/android-x86_64-cpu
@@ -503,7 +486,7 @@ jobs:
 
       - name: Upload to Release
         if: fromJson(needs.config.outputs.deploy)
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           prerelease: true
           tag_name: ${{ env.VERSION }}
