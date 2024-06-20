@@ -1979,26 +1979,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "ort"
-version = "1.16.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "889dca4c98efa21b1ba54ddb2bde44fd4920d910f492b618351f839d8428d79d"
-dependencies = [
- "flate2",
- "half",
- "lazy_static",
- "libc",
- "ndarray",
- "tar",
- "thiserror",
- "tracing",
- "ureq",
- "vswhom",
- "winapi",
- "zip",
-]
-
-[[package]]
 name = "os_pipe"
 version = "1.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3559,7 +3539,6 @@ dependencies = [
  "ndarray",
  "once_cell",
  "open_jtalk",
- "ort",
  "ouroboros",
  "pretty_assertions",
  "rayon",
@@ -3668,26 +3647,6 @@ dependencies = [
  "tracing",
  "uuid",
  "voicevox_core",
-]
-
-[[package]]
-name = "vswhom"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "be979b7f07507105799e854203b470ff7c78a1639e330a58f183b5fea574608b"
-dependencies = [
- "libc",
- "vswhom-sys",
-]
-
-[[package]]
-name = "vswhom-sys"
-version = "0.1.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d3b17ae1f6c8a2b28506cd96d412eebf83b4a0ff2cbefeeb952f2f9dfa44ba18"
-dependencies = [
- "cc",
- "libc",
 ]
 
 [[package]]

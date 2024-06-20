@@ -454,7 +454,6 @@ pub(crate) mod tokio {
     }
 }
 
-<<<<<<< HEAD
 #[cfg(target_family = "wasm")]
 pub(crate) mod tokio {
     use std::path::Path;
@@ -501,7 +500,7 @@ pub(crate) mod tokio {
         pub(crate) fn header(&self) -> &VoiceModelHeader {
             &self.inner.header()
         }
-=======
+    }}
 #[cfg(test)]
 mod tests {
     use once_cell::sync::Lazy;
@@ -598,6 +597,5 @@ mod tests {
             "order": null
         }))
         .unwrap()
->>>>>>> upstream/main
     }
 }

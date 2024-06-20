@@ -41,7 +41,6 @@ tokio = { workspace = true, features = ["sync", "macros", "rt"] }
 tracing.workspace = true
 uuid = { workspace = true, features = ["v4", "serde"] }
 voicevox_core_macros = { path = "../voicevox_core_macros" }
-voicevox-ort = { workspace = true, features = ["ndarray", "download-binaries"] }
 zip = { version = "0.6.6", default-features = false, features = [
   "deflate-zlib",
 ] }
@@ -63,11 +62,11 @@ windows = { version = "0.43.0", features = [
 
 [target."cfg(not(target_family = \"wasm\"))".dependencies]
 async_zip = { workspace = true, features = ["deflate"] }
-ort = { version = "1.16.3" }
+voicevox-ort = { workspace = true, features = ["ndarray", "download-binaries"] }
 
 [lints.rust]
 # FIXME: `unsafe impl Send`のもあるが、以下2つのマージにより消える予定
 # * https://github.com/VOICEVOX/voicevox_core/pull/725
 # * https://github.com/VOICEVOX/voicevox_core/pull/772
-unsafe_code = "allow" # WindowsのGPU情報表示に、Win32を利用
+unsafe_code = "allow"     # WindowsのGPU情報表示に、Win32を利用
 rust_2018_idioms = "warn"
