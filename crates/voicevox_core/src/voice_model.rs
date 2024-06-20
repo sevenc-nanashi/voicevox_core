@@ -461,10 +461,10 @@ pub(crate) mod tokio {
     use enum_map::EnumMap;
 
     use crate::{
-        error::LoadModelResult, infer::domain::InferenceOperationImpl, Result, VoiceModelMeta,
+        error::LoadModelResult, infer::domains::InferenceDomainMap, Result, VoiceModelMeta,
     };
 
-    use super::{VoiceModelHeader, VoiceModelId};
+    use super::{ModelBytesWithInnerVoiceIdsByDomain, VoiceModelHeader, VoiceModelId};
 
     /// 音声モデル。
     ///
@@ -477,7 +477,7 @@ pub(crate) mod tokio {
     impl self::VoiceModel {
         pub(crate) async fn read_inference_models(
             &self,
-        ) -> LoadModelResult<EnumMap<InferenceOperationImpl, Vec<u8>>> {
+        ) -> LoadModelResult<InferenceDomainMap<ModelBytesWithInnerVoiceIdsByDomain>> {
             self.inner.read_inference_models()
         }
         /// VVMファイルから`VoiceModel`をコンストラクトする。
@@ -489,7 +489,7 @@ pub(crate) mod tokio {
 
         /// ID。
         pub fn id(&self) -> &VoiceModelId {
-            &self.inner.header().id
+            &self.inner.header().manifest.id
         }
 
         /// メタ情報。
@@ -500,7 +500,8 @@ pub(crate) mod tokio {
         pub(crate) fn header(&self) -> &VoiceModelHeader {
             &self.inner.header()
         }
-    }}
+    }
+}
 #[cfg(test)]
 mod tests {
     use once_cell::sync::Lazy;

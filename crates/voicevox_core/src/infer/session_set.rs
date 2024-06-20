@@ -1,6 +1,5 @@
 use std::{collections::HashMap, fmt::Display, marker::PhantomData, sync::Arc};
 
-use anyhow::bail;
 use enum_map::{Enum as _, EnumMap};
 use itertools::Itertools as _;
 
@@ -45,6 +44,7 @@ impl<R: InferenceRuntime, D: InferenceDomain> InferenceSessionSet<R, D> {
             expected: &[ParamInfo<D>],
             actual: &[ParamInfo<D>],
         ) -> anyhow::Result<()> {
+            use anyhow::bail;
             if !(expected.len() == actual.len()
                 && itertools::zip_eq(expected, actual)
                     .all(|(expected, actual)| expected.accepts(actual)))

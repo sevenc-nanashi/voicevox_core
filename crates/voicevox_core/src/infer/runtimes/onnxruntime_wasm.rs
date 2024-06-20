@@ -202,12 +202,14 @@ impl PushInputTensor for OnnxruntimeRunContext<'_> {
         [ push_int64 ]   [ i64 ] [ Int64 ];
         [ push_float32 ] [ f32 ] [ Float32 ];
     )]
-    fn method(&mut self, tensor: Array<T, impl Dimension + 'static>) {
+    fn method(&mut self, tensor: Array<T, impl Dimension + 'static>) -> anyhow::Result<()> {
         let shape = tensor.shape().to_vec();
         let tensor_vec = tensor.into_raw_vec();
         self.inputs.push(Tensor {
             data: TensorData::kind_item(tensor_vec),
             shape,
         });
+
+        Ok(())
     }
 }
