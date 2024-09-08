@@ -56,7 +56,7 @@ function allocPointer<T>(vvc: VoicevoxCore) {
 }
 function getPointerValue<T extends string>(
   vvc: VoicevoxCore,
-  pointer: Pointer<`${T}*`>,
+  pointer: Pointer<Pointer<`${T}`>>,
 ) {
   return vvc.getValue(pointer, "i32") as Pointer<T>;
 }
@@ -73,11 +73,31 @@ function fileExists(vvc: VoicevoxCore, path: string) {
   }
 }
 
+export const createOnnxruntime = async () => {
+  const vvc = await voicevoxCore();
+  const returnPtr = allocPointer<Pointer<"VoicevoxOnnxruntime">>(vvc);
+  throwIfError(
+    vvc,
+    vvc.ccall(
+      "voicevox_onnxruntime_init_once_wasm",
+      "number",
+      ["number"],
+      [returnPtr],
+    ),
+  );
+  return getPointerValue(vvc, returnPtr);
+};
+
 const openJtalkFinalizer = new FinalizationRegistry(
   (pointer: Pointer<"OpenJtalkRc">) => {
     const vvc = _voicevoxCore;
     if (vvc) {
-      vvc.ccall("voicevox_open_jtalk_rc_delete", "void", ["number"], [pointer]);
+      vvc.ccall(
+        "voicevox_open_jtalk_rc_delete",
+        "number",
+        ["number"],
+        [pointer],
+      );
     }
   },
 );
@@ -100,7 +120,7 @@ export class OpenJtalkRc {
         }
       }
     }
-    const returnPtr = allocPointer<"OpenJtalkRc*">(vvc);
+    const returnPtr = allocPointer<Pointer<"OpenJtalkRc">>(vvc);
     throwIfError(
       vvc,
       vvc.ccall(
@@ -133,7 +153,10 @@ const synthesizerFinalizer = new FinalizationRegistry(
 );
 
 export class Synthesizer {
-  static async new(openJtalkRc: OpenJtalkRc) {
+  static async new(
+    onnxruntime: Pointer<"VoicevoxOnnxruntime">,
+    openJtalkRc: OpenJtalkRc,
+  ) {
     const vvc = await voicevoxCore();
     const accelerationModePtr = allocPointer<"AccelerationMode">(vvc);
     const cpuNumThreadsPtr = allocPointer<"i32">(vvc);
@@ -148,14 +171,20 @@ export class Synthesizer {
     const accelerationMode = 2;
     const cpuNumThreads = vvc.getValue(cpuNumThreadsPtr, "i32");
 
-    const returnPtr = allocPointer<"VoicevoxSynthesizer*">(vvc);
+    const returnPtr = allocPointer<Pointer<"VoicevoxSynthesizer">>(vvc);
     throwIfError(
       vvc,
       vvc.ccall(
         "voicevox_synthesizer_new_wasm",
         "number",
         ["number", "number", "number", "number"],
-        [openJtalkRc._pointer, accelerationMode, cpuNumThreads, returnPtr],
+        [
+          onnxruntime,
+          openJtalkRc._pointer,
+          accelerationMode,
+          cpuNumThreads,
+          returnPtr,
+        ],
       ),
     );
 
@@ -199,7 +228,7 @@ export class Synthesizer {
       vvc.getValue(enableInterrogativeUpspeakPtr, "i8") !== 0;
 
     const outputWavLengthPtr = allocPointer<"i32">(vvc);
-    const outputWavPtrPtr = allocPointer<"u8*">(vvc);
+    const outputWavPtrPtr = allocPointer<Pointer<"u8">>(vvc);
 
     throwIfError(
       vvc,
@@ -250,7 +279,7 @@ const voiceModelFinalizer = new FinalizationRegistry(
     const vvc = _voicevoxCore;
     if (vvc) {
       console.log("Deleting voice model", pointer);
-      vvc.ccall("voicevox_voice_model_delete", "void", ["number"], [pointer]);
+      vvc.ccall("voicevox_voice_model_delete", "number", ["number"], [pointer]);
     }
   },
 );
@@ -259,7 +288,7 @@ export class VoiceModel {
     const vvc = await voicevoxCore();
     const nonce = Math.floor(Math.random() * 1000000);
     vvc.FS.writeFile(`/data/voice_model_${nonce}.vvm`, model, { flags: "w" });
-    const returnPtr = allocPointer<"VoicevoxVoiceModel*">(vvc);
+    const returnPtr = allocPointer<Pointer<"VoicevoxVoiceModel">>(vvc);
     throwIfError(
       vvc,
       vvc.ccall(

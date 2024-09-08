@@ -17,7 +17,8 @@ const modelLoad = async () => {
 
 const synthesizerCreate = async () => {
   const openJtalkRc = await OpenJtalkRc.new();
-  const id = await Synthesizer.new(openJtalkRc);
+  const onnxruntime = await core.createOnnxruntime();
+  const id = await Synthesizer.new(onnxruntime, openJtalkRc);
   synthesizer.value = id;
 };
 const synthesizerLoadModel = async () => {

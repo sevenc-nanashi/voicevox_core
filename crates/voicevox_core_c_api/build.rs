@@ -23,7 +23,7 @@ fn main() {
         // println!("cargo:rustc-link-arg=-sEXPORT_NAME=\"RawVoicevoxCore\"");
         // println!("cargo:rustc-link-arg=-sMODULARIZE=1");
         println!("cargo:rustc-link-arg=-sTOTAL_STACK=128MB");
-        println!("cargo:rustc-link-arg=-sINITIAL_MEMORY=256MB");
+        println!("cargo:rustc-link-arg=-sINITIAL_MEMORY=512MB");
         println!("cargo:rustc-link-arg=-sALLOW_MEMORY_GROWTH=1");
 
         let re = Regex::new(r#"pub (?:unsafe )?extern "C" fn (\w+)"#).unwrap();
@@ -41,10 +41,10 @@ fn main() {
                 continue;
             }
 
-            functions.push(format!("_{}", cap[1].to_string()));
+            functions.push(format!("_{}", &cap[1]));
         }
         for cap in re.captures_iter(&wasm_rs) {
-            functions.push(format!("_{}", cap[1].to_string()));
+            functions.push(format!("_{}", &cap[1]));
         }
         println!(
             "cargo:rustc-link-arg=-sEXPORTED_RUNTIME_METHODS=[\"{}\"]",
@@ -81,6 +81,8 @@ fn main() {
         println!("cargo:rustc-link-arg=-sERROR_ON_UNDEFINED_SYMBOLS=0");
         println!("cargo:rustc-link-arg=-sEXPORT_NAME=VoicevoxCore");
         println!("cargo:rustc-link-arg=-sASYNCIFY=1");
+        // println!("cargo:rustc-link-arg=-sWASMFS");
+        println!("cargo:rustc-link-arg=-sFORCE_FILESYSTEM");
         println!("cargo:rustc-link-arg=--no-entry");
 
         // 本当はvoicevox_core/build.rsに置きたいけどできない（当社調べ）なのでここに置く

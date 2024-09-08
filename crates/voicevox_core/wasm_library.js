@@ -2,7 +2,7 @@ addToLibrary({
   $onnxruntime_injection__postset: "onnxruntime_injection();",
   $onnxruntime_injection: function () {
     let onnxruntime;
-    import("onnxruntime-web/webgpu").then((onnxruntime_) => {
+    import("onnxruntime-web/all").then((onnxruntime_) => {
       onnxruntime = onnxruntime_;
       console.log("onnxruntime-web loaded");
       console.log(onnxruntime_);
