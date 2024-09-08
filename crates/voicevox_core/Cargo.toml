@@ -4,14 +4,20 @@ version.workspace = true
 edition.workspace = true
 publish.workspace = true
 
+[package.metadata.docs.rs]
+features = ["load-onnxruntime", "link-onnxruntime"]
+rustdoc-args = ["--cfg", "docsrs"]
+
+# rustdocを参照
 [features]
 default = []
-cuda = ["voicevox-ort/cuda"]
-directml = ["voicevox-ort/directml"]
+load-onnxruntime = ["voicevox-ort/load-dynamic"]
+link-onnxruntime = []
 
 [dependencies]
 anyhow.workspace = true
 camino.workspace = true
+const_format.workspace = true
 derive-getters.workspace = true
 derive-new.workspace = true
 derive_more.workspace = true
@@ -25,10 +31,10 @@ indexmap = { workspace = true, features = ["serde"] }
 itertools.workspace = true
 jlabel.workspace = true
 ndarray.workspace = true
-once_cell.workspace = true
 open_jtalk.workspace = true
 ouroboros.workspace = true
 rayon = { workspace = true, features = ["web_spin_lock"] }
+ref-cast.workspace = true
 regex.workspace = true
 serde = { workspace = true, features = ["derive", "rc"] }
 serde_json = { workspace = true, features = ["preserve_order"] }
@@ -40,8 +46,12 @@ thiserror.workspace = true
 tokio = { workspace = true, features = ["sync", "macros", "rt"] }
 tracing.workspace = true
 uuid = { workspace = true, features = ["v4", "serde"] }
+voicevox-ort = { workspace = true, features = [
+  "download-binaries",
+  "__init-for-voicevox",
+] }
 voicevox_core_macros = { path = "../voicevox_core_macros" }
-zip = { version = "0.6.6", default-features = false, features = [
+zip = { workspace = true, default-features = false, features = [
   "deflate-zlib",
 ] }
 
@@ -51,7 +61,7 @@ pretty_assertions.workspace = true
 rstest.workspace = true
 rstest_reuse.workspace = true
 test_util.workspace = true
-tokio = { workspace = true, features = ["rt", "macros"] }
+tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
 
 [target."cfg(windows)".dependencies]
 humansize = "2.1.2"

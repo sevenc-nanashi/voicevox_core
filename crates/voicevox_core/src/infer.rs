@@ -11,17 +11,32 @@ use enum_map::{Enum, EnumMap};
 use ndarray::{Array, ArrayD, Dimension, ShapeError};
 use thiserror::Error;
 
-use crate::{StyleType, SupportedDevices};
+use crate::{
+    devices::{DeviceSpec, GpuSpec},
+    StyleType, SupportedDevices,
+};
 
 pub(crate) trait InferenceRuntime: 'static {
     // TODO: "session"とは何なのかを定め、ドキュメントを書く。`InferenceSessionSet`も同様。
     type Session: Sized + Send + 'static;
     type RunContext<'a>: From<&'a mut Self::Session> + PushInputTensor;
 
-    fn supported_devices() -> crate::Result<SupportedDevices>;
+    /// 名前。
+    const DISPLAY_NAME: &'static str;
 
-    #[allow(clippy::type_complexity)]
+    /// このランタイムで利用可能なデバイスの情報を取得する。
+    fn supported_devices(&self) -> crate::Result<SupportedDevices>;
+
+    /// GPUが実際に利用できそうかどうか判定する。
+    fn test_gpu(&self, gpu: GpuSpec) -> anyhow::Result<()>;
+
+    #[expect(
+        clippy::type_complexity,
+        reason = "ここを呼び出すのは現状一箇所なので、可読性が著しく落ちてはいないことを考えると\
+                  別にこのままでいいはず"
+    )]
     fn new_session(
+        &self,
         model: impl FnOnce() -> std::result::Result<Vec<u8>, DecryptModelError>,
         options: InferenceSessionOptions,
     ) -> anyhow::Result<(
@@ -53,7 +68,11 @@ pub(crate) trait InferenceDomain: Sized {
 /// `::macros::InferenceOperation`により導出される。
 pub(crate) trait InferenceOperation: Copy + Enum {
     /// `{InferenceInputSignature,InferenceOutputSignature}::PARAM_INFOS`を集めたもの。
-    #[allow(clippy::type_complexity)]
+    #[expect(
+        clippy::type_complexity,
+        reason = "ここを参照するのは現状一箇所なので、可読性が著しく落ちてはいないことを考えると\
+                  別にこのままでいいはず"
+    )]
     const PARAM_INFOS: EnumMap<
         Self,
         (
@@ -185,7 +204,7 @@ impl<D: PartialEq> ParamInfo<D> {
 #[derive(new, Clone, Copy, PartialEq, Debug)]
 pub(crate) struct InferenceSessionOptions {
     pub(crate) cpu_num_threads: u16,
-    pub(crate) use_gpu: bool,
+    pub(crate) device: DeviceSpec,
 }
 
 #[derive(Error, Debug)]

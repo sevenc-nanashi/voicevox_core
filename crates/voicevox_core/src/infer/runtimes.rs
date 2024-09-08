@@ -1,7 +1,5 @@
 #[cfg(not(target_family = "wasm"))]
-mod onnxruntime;
+pub(crate) mod onnxruntime;
 #[cfg(target_family = "wasm")]
 #[path = "runtimes/onnxruntime_wasm.rs"]
-mod onnxruntime;
-
-pub(crate) use self::onnxruntime::Onnxruntime;
+pub(crate) mod onnxruntime;

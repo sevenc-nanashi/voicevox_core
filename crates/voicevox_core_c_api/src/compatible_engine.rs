@@ -3,17 +3,14 @@ use std::{
     env,
     ffi::{c_char, CString},
     path::PathBuf,
-    sync::{Mutex, MutexGuard},
+    sync::{LazyLock, Mutex, MutexGuard},
 };
 
 use libc::c_int;
 
-use once_cell::sync::Lazy;
-use voicevox_core::{
-    StyleId, SupportedDevices, VoiceModelId, __internal::interop::PerformInference as _,
-};
+use voicevox_core::{StyleId, VoiceModelId, __internal::interop::PerformInference as _};
 
-use crate::init_logger_once;
+use crate::{helpers::display_error, init_logger_once};
 
 macro_rules! ensure_initialized {
     ($synthesizer:expr $(,)?) => {
@@ -27,7 +24,16 @@ macro_rules! ensure_initialized {
     };
 }
 
-static ERROR_MESSAGE: Lazy<Mutex<String>> = Lazy::new(|| Mutex::new(String::new()));
+static ERROR_MESSAGE: LazyLock<Mutex<String>> = LazyLock::new(|| Mutex::new(String::new()));
+
+static ONNXRUNTIME: LazyLock<&'static voicevox_core::blocking::Onnxruntime> = LazyLock::new(|| {
+    voicevox_core::blocking::Onnxruntime::load_once()
+        .exec()
+        .unwrap_or_else(|err| {
+            display_error(&err);
+            panic!("ONNX Runtimeをロードもしくは初期化ができなかったため、クラッシュします");
+        })
+});
 
 struct VoiceModelSet {
     all_vvms: Vec<voicevox_core::blocking::VoiceModel>,
@@ -36,7 +42,7 @@ struct VoiceModelSet {
     model_map: BTreeMap<VoiceModelId, voicevox_core::blocking::VoiceModel>,
 }
 
-static VOICE_MODEL_SET: Lazy<VoiceModelSet> = Lazy::new(|| {
+static VOICE_MODEL_SET: LazyLock<VoiceModelSet> = LazyLock::new(|| {
     let all_vvms = get_all_models();
     let model_map: BTreeMap<_, _> = all_vvms.iter().map(|vvm| (vvm.id(), vvm.clone())).collect();
     let metas = voicevox_core::__internal::interop::merge_metas(
@@ -45,8 +51,8 @@ static VOICE_MODEL_SET: Lazy<VoiceModelSet> = Lazy::new(|| {
     let mut style_model_map = BTreeMap::default();
     for vvm in all_vvms.iter() {
         for meta in vvm.metas().iter() {
-            for style in meta.styles().iter() {
-                style_model_map.insert(*style.id(), vvm.id());
+            for style in meta.styles.iter() {
+                style_model_map.insert(style.id, vvm.id());
             }
         }
     }
@@ -93,8 +99,8 @@ fn voice_model_set() -> &'static VoiceModelSet {
     &VOICE_MODEL_SET
 }
 
-static SYNTHESIZER: Lazy<Mutex<Option<voicevox_core::blocking::Synthesizer<()>>>> =
-    Lazy::new(|| Mutex::new(None));
+static SYNTHESIZER: LazyLock<Mutex<Option<voicevox_core::blocking::Synthesizer<()>>>> =
+    LazyLock::new(|| Mutex::new(None));
 
 fn lock_synthesizer() -> MutexGuard<'static, Option<voicevox_core::blocking::Synthesizer<()>>> {
     SYNTHESIZER.lock().unwrap()
@@ -112,6 +118,7 @@ pub extern "C" fn initialize(use_gpu: bool, cpu_num_threads: c_int, load_all_mod
     init_logger_once();
     let result = (|| {
         let synthesizer = voicevox_core::blocking::Synthesizer::new(
+            *ONNXRUNTIME,
             (),
             &voicevox_core::InitializeOptions {
                 acceleration_mode: if use_gpu {
@@ -196,8 +203,15 @@ pub extern "C" fn supported_devices() -> *const c_char {
     init_logger_once();
     return SUPPORTED_DEVICES.as_ptr();
 
-    static SUPPORTED_DEVICES: Lazy<CString> = Lazy::new(|| {
-        CString::new(SupportedDevices::create().unwrap().to_json().to_string()).unwrap()
+    static SUPPORTED_DEVICES: LazyLock<CString> = LazyLock::new(|| {
+        CString::new(
+            ONNXRUNTIME
+                .supported_devices()
+                .unwrap()
+                .to_json()
+                .to_string(),
+        )
+        .unwrap()
     });
 }
 

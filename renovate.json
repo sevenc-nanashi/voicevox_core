@@ -8,12 +8,19 @@
     {
       "groupSlug": "rust",
       "groupName": "Rust",
-      "matchDepPatterns": "^Rust$"
+      "matchPackagePatterns": [
+        "^rust-lang/rust$"
+      ]
     },
     {
       "groupSlug": "others",
       "groupName": "Others",
-      "excludeDepPatterns": "^Rust$",
+      "matchPackagePatterns": [
+        "*"
+      ],
+      "excludePackagePatterns": [
+        "^rust-lang/rust$"
+      ],
       "dependencyDashboardApproval": true
     }
   ],
@@ -28,7 +35,7 @@
       ],
       "depNameTemplate": "Rust",
       "packageNameTemplate": "rust-lang/rust",
-      "datasourceTemplate": "github-releases"
+      "datasourceTemplate": "github-tags"
     }
   ]
 }

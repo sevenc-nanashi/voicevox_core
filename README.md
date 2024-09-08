@@ -1,6 +1,6 @@
 # VOICEVOX CORE
 
-## **現在の main ブランチは工事中なので正しく動かないことがあります。[バージョン 0.14.4](https://github.com/VOICEVOX/voicevox_core/tree/0.14.4)をご利用ください。**
+## **現在の main ブランチは工事中なので正しく動かないことがあります。[バージョン 0.15.4](https://github.com/VOICEVOX/voicevox_core/tree/0.15.4)をご利用ください。**
 
 [![releases](https://img.shields.io/github/v/release/VOICEVOX/voicevox_core?label=release)](https://github.com/VOICEVOX/voicevox_core/releases)
 [![test](https://github.com/VOICEVOX/voicevox_core/actions/workflows/test.yml/badge.svg)](https://github.com/VOICEVOX/voicevox_core/actions/workflows/test.yml)
@@ -150,10 +150,18 @@ model フォルダにある onnx モデルはダミーのため、ノイズの�
 
 ```bash
 # DLLをビルド
-cargo build --release -p voicevox_core_c_api
+cargo build --release -p voicevox_core_c_api --features load-onnxruntime
 ```
 
-DLL 用のヘッダファイルは [crates/voicevox_core_c_api/include/voicevox_core.h](https://github.com/VOICEVOX/voicevox_core/tree/main/crates/voicevox_core_c_api/include/voicevox_core.h) にあります。
+DLL 用のヘッダファイルの雛形は [crates/voicevox_core_c_api/include/voicevox_core.h](https://github.com/VOICEVOX/voicevox_core/tree/main/crates/voicevox_core_c_api/include/voicevox_core.h) にあります。
+詳しくは[feature-options.md](./docs/feature-options.md)を参照してください。
+
+```bash
+# ヘッダファイルを加工し、マクロ`VOICEVOX_LOAD_ONNXRUNTIME`を宣言
+sed 's:^//\(#define VOICEVOX_LOAD_ONNXRUNTIME\)$:\1:' \
+  crates/voicevox_core_c_api/include/voicevox_core.h \
+  > ./voicevox_core.h
+```
 
 ## コアライブラリのテスト
 

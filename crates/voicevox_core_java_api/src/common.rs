@@ -72,6 +72,7 @@ where
                         let class = class!(
                             NotLoadedOpenjtalkDict,
                             GpuSupport,
+                            InitInferenceRuntime,
                             OpenZipFile,
                             ReadZipEntry,
                             InvalidModelFormat,
@@ -81,7 +82,7 @@ where
                             GetSupportedDevices,
                             StyleNotFound,
                             ModelNotFound,
-                            InferenceFailed,
+                            RunModel,
                             ExtractFullContextLabel,
                             ParseKana,
                             LoadUserDict,
