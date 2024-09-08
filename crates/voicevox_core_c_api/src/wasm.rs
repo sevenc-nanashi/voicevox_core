@@ -2,6 +2,21 @@
 use crate::*;
 
 #[no_mangle]
+pub unsafe extern "C" fn voicevox_onnxruntime_init_once_wasm(
+    out_onnxruntime: NonNull<&'static VoicevoxOnnxruntime>,
+) -> VoicevoxResultCode {
+    init_logger_once();
+    into_result_code_with_error((|| {
+        let instance = VoicevoxOnnxruntime::init_once()?;
+        unsafe {
+            // SAFETY: ユーザーに要求している条件で十分
+            out_onnxruntime.write_unaligned(instance);
+        }
+        Ok(())
+    })())
+}
+
+#[no_mangle]
 pub extern "C" fn voicevox_make_default_initialize_options_wasm(
     acceleration_mode: *mut VoicevoxAccelerationMode,
     cpu_num_threads: *mut i32,
@@ -15,6 +30,7 @@ pub extern "C" fn voicevox_make_default_initialize_options_wasm(
 
 #[no_mangle]
 pub unsafe extern "C" fn voicevox_synthesizer_new_wasm(
+    onnxruntime: &'static VoicevoxOnnxruntime,
     open_jtalk: &OpenJtalkRc,
     options_acceleration_mode: VoicevoxAccelerationMode,
     options_cpu_num_threads: i32,
@@ -24,7 +40,7 @@ pub unsafe extern "C" fn voicevox_synthesizer_new_wasm(
         acceleration_mode: options_acceleration_mode.into(),
         cpu_num_threads: options_cpu_num_threads as u16,
     };
-    voicevox_synthesizer_new(open_jtalk, options, out_synthesizer)
+    voicevox_synthesizer_new(onnxruntime, open_jtalk, options, out_synthesizer)
 }
 
 #[no_mangle]

@@ -95,7 +95,7 @@ pub struct SupportedDevices {
 impl SupportedDevices {
     /// このライブラリで利用可能なデバイスの情報。
     ///
-    /// `load-onnxruntime`のフィーチャが有効化されているときはすべて`true`となる。
+    /// `load-onnxruntime`のフィーチャが有効化されているとき、またはWASMビルドではすべて`true`となる。
     ///
     #[cfg_attr(feature = "load-onnxruntime", doc = "```")]
     #[cfg_attr(not(feature = "load-onnxruntime"), doc = "```no_run")]
@@ -112,7 +112,7 @@ impl SupportedDevices {
     /// assert!(!SupportedDevices::THIS.cuda);
     /// assert!(!SupportedDevices::THIS.dml);
     /// ```
-    pub const THIS: Self = if cfg!(feature = "load-onnxruntime") {
+    pub const THIS: Self = if cfg!(feature = "load-onnxruntime") || cfg!(target_family = "wasm") {
         Self {
             cpu: true,
             cuda: true,

@@ -24,8 +24,8 @@
 
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
-#[cfg(not(any(feature = "load-onnxruntime", feature = "link-onnxruntime")))]
-compile_error!("either `load-onnxruntime` or `link-onnxruntime` must be enabled");
+#[cfg(not(any(feature = "load-onnxruntime", feature = "link-onnxruntime", target_family = "wasm")))]
+compile_error!("either `load-onnxruntime` or `link-onnxruntime` must be enabled in non-wasm build");
 
 #[cfg(not(doc))]
 const _: () = {

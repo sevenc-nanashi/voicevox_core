@@ -19,6 +19,8 @@ pub async fn synthesizer_with_sample_voice_model(
             .await?,
         #[cfg(feature = "link-onnxruntime")]
         crate::tokio::Onnxruntime::init_once().await?,
+        #[cfg(target_family = "wasm")]
+        crate::tokio::Onnxruntime::init_once().await?,
         crate::tokio::OpenJtalk::new(open_jtalk_dic_dir).await?,
         &InitializeOptions {
             acceleration_mode: AccelerationMode::Cpu,

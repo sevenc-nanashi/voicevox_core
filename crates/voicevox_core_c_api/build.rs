@@ -35,6 +35,12 @@ fn main() {
         let lib_rs = fs::read_to_string("src/lib.rs").unwrap();
         let wasm_rs = fs::read_to_string("src/wasm.rs").unwrap();
         for cap in re.captures_iter(&lib_rs) {
+            let line_number = lib_rs[..cap.get(0).unwrap().start()].lines().count();
+            let cfg_line = lib_rs.lines().nth(line_number - 2).unwrap();
+            if cfg_line.contains("cfg") {
+                continue;
+            }
+
             functions.push(format!("_{}", cap[1].to_string()));
         }
         for cap in re.captures_iter(&wasm_rs) {

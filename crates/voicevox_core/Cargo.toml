@@ -46,10 +46,6 @@ thiserror.workspace = true
 tokio = { workspace = true, features = ["sync", "macros", "rt"] }
 tracing.workspace = true
 uuid = { workspace = true, features = ["v4", "serde"] }
-voicevox-ort = { workspace = true, features = [
-  "download-binaries",
-  "__init-for-voicevox",
-] }
 voicevox_core_macros = { path = "../voicevox_core_macros" }
 zip = { workspace = true, default-features = false, features = [
   "deflate-zlib",
@@ -72,7 +68,10 @@ windows = { version = "0.43.0", features = [
 
 [target."cfg(not(target_family = \"wasm\"))".dependencies]
 async_zip = { workspace = true, features = ["deflate"] }
-voicevox-ort = { workspace = true, features = ["ndarray", "download-binaries"] }
+voicevox-ort = { workspace = true, features = [
+  "download-binaries",
+  "__init-for-voicevox",
+] }
 
 [lints.rust]
 # FIXME: `unsafe impl Send`のもあるが、以下2つのマージにより消える予定
