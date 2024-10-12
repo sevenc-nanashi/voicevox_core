@@ -49,7 +49,7 @@ addToLibrary({
             if (!session) {
               console.log("onnxruntime session create with WASM");
               session = await onnxruntime.InferenceSession.create(modelData, {
-                executionProviders: ["wasm"],
+                executionProviders: ["cpu"],
               });
             }
             sessions[nonce] = session;

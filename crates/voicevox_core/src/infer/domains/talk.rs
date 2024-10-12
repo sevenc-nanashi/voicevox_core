@@ -23,7 +23,7 @@ impl InferenceDomain for TalkDomain {
     }
 }
 
-#[derive(Clone, Copy, Enum, InferenceOperation)]
+#[derive(Clone, Copy, Enum, Debug, InferenceOperation)]
 #[inference_operation(
     type Domain = TalkDomain;
 )]

@@ -2,6 +2,7 @@ use std::{collections::HashMap, fmt::Display, marker::PhantomData, sync::Arc};
 
 use enum_map::{Enum as _, EnumMap};
 use itertools::Itertools as _;
+use tracing::info;
 
 use crate::error::ErrorRepr;
 
@@ -26,6 +27,10 @@ impl<R: InferenceRuntime, D: InferenceDomain> InferenceSessionSet<R, D> {
                 let (expected_input_param_infos, expected_output_param_infos) =
                     <D::Operation as InferenceOperation>::PARAM_INFOS[op];
 
+                info!(
+                    "Loading model for operation {:?} with options {:?}",
+                    op, options[op]
+                );
                 let (sess, actual_input_param_infos, actual_output_param_infos) =
                     rt.new_session(|| model_file::decrypt(model_bytes), options[op])?;
 

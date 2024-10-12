@@ -167,8 +167,7 @@ export class Synthesizer {
       ["number", "number"],
       [accelerationModePtr, cpuNumThreadsPtr],
     );
-    // const accelerationMode = vvc.getValue(accelerationModePtr, "i32");
-    const accelerationMode = 2;
+    const accelerationMode = vvc.getValue(accelerationModePtr, "i32");
     const cpuNumThreads = vvc.getValue(cpuNumThreadsPtr, "i32");
 
     const returnPtr = allocPointer<Pointer<"VoicevoxSynthesizer">>(vvc);
