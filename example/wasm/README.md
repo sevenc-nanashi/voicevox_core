@@ -40,3 +40,10 @@ zip -r ../../../example/wasm/public/open_jtalk_dic.zip open_jtalk_dic
   - WebNN：
     - 前提：`about:flags`から WebNN を有効にする。
     - numberがthrowされる謎のエラーが出る。
+- 2024/10/12：動いた！
+  - 1.17まで戻した。
+  - WebGL：落ちた：`input tensor[0] check failed: expected shape '[,]' but got [94,80]`
+    - 謎。
+  - WebGPU：動いた！
+    - とはいってもそんなに早くならなかった。残念。
+  - WebNN：1.17まで下げた影響により、存在が抹消されたのでN/A。
