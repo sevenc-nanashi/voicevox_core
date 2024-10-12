@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "jszip": "3.10.1",
-    "onnxruntime-web": "^1.19.2",
+    "onnxruntime-web": "1.17.3",
     "vue": "^3.5.12"
   },
   "devDependencies": {
