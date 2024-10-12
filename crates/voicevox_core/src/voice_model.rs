@@ -498,54 +498,6 @@ pub(crate) mod nonblocking {
     }
 }
 
-#[cfg(target_family = "wasm")]
-pub(crate) mod tokio {
-    use std::path::Path;
-
-    use enum_map::EnumMap;
-
-    use crate::{
-        error::LoadModelResult, infer::domains::InferenceDomainMap, Result, VoiceModelMeta,
-    };
-
-    use super::{ModelBytesWithInnerVoiceIdsByDomain, VoiceModelHeader, VoiceModelId};
-
-    /// 音声モデル。
-    ///
-    /// VVMファイルと対応する。
-    #[derive(Clone)]
-    pub struct VoiceModel {
-        inner: super::blocking::VoiceModel,
-    }
-
-    impl self::VoiceModel {
-        pub(crate) async fn read_inference_models(
-            &self,
-        ) -> LoadModelResult<InferenceDomainMap<ModelBytesWithInnerVoiceIdsByDomain>> {
-            self.inner.read_inference_models()
-        }
-        /// VVMファイルから`VoiceModel`をコンストラクトする。
-        pub async fn from_path(path: impl AsRef<Path>) -> Result<Self> {
-            Ok(Self {
-                inner: super::blocking::VoiceModel::from_path(path)?,
-            })
-        }
-
-        /// ID。
-        pub fn id(&self) -> &VoiceModelId {
-            &self.inner.header().manifest.id
-        }
-
-        /// メタ情報。
-        pub fn metas(&self) -> &VoiceModelMeta {
-            &self.inner.header().metas
-        }
-
-        pub(crate) fn header(&self) -> &VoiceModelHeader {
-            &self.inner.header()
-        }
-    }
-}
 #[cfg(test)]
 mod tests {
     use rstest::rstest;

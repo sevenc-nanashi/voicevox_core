@@ -251,8 +251,7 @@ impl PushInputTensor for OnnxruntimeRunContext<'_> {
 }
 
 // とりあえずコピペ、後で整理
-pub(crate) mod tokio {
-    use super::*;
+pub(crate) mod nonblocking {
     use ref_cast::{ref_cast_custom, RefCastCustom};
 
     use crate::SupportedDevices;
@@ -270,15 +269,17 @@ pub(crate) mod tokio {
     #[cfg_attr(not(feature = "load-onnxruntime"), doc = "```compile_fail")]
     /// # use voicevox_core as another_lib;
     /// #
-    /// # #[tokio::main]
+    /// # #[pollster::main]
     /// # async fn main() -> anyhow::Result<()> {
     /// # if cfg!(windows) {
     /// #     // Windows\System32\onnxruntime.dllを回避
-    /// #     voicevox_core::blocking::Onnxruntime::init_once()
+    /// #     voicevox_core::blocking::Onnxruntime::load_once()
     /// #         .filename(test_util::ONNXRUNTIME_DYLIB_PATH)
     /// #         .exec()?;
     /// # }
-    /// let ort1 = voicevox_core::tokio::Onnxruntime::init_once().exec().await?;
+    /// let ort1 = voicevox_core::nonblocking::Onnxruntime::load_once()
+    ///     .exec()
+    ///     .await?;
     /// let ort2 = another_lib::blocking::Onnxruntime::get().expect("`ort1`と同一のはず");
     /// assert_eq!(ptr_addr(ort1), ptr_addr(ort2));
     ///
@@ -289,7 +290,13 @@ pub(crate) mod tokio {
     /// # }
     /// ```
     ///
+    /// # Performance
+    ///
+    /// [blocking]クレートにより動いている。詳しくは[`nonblocking`モジュールのドキュメント]を参照。
+    ///
     /// [voicevox-ort]: https://github.com/VOICEVOX/ort
+    /// [blocking]: https://docs.rs/crate/blocking
+    /// [`nonblocking`モジュールのドキュメント]: crate::nonblocking
     #[derive(Debug, RefCastCustom)]
     #[repr(transparent)]
     pub struct Onnxruntime(pub(crate) super::blocking::Onnxruntime);
@@ -340,10 +347,20 @@ pub(crate) mod tokio {
         /// ONNX Runtimeをロードして初期化する。
         ///
         /// 一度成功したら、以後は引数を無視して同じ参照を返す。
+        #[cfg(feature = "load-onnxruntime")]
+        #[cfg_attr(docsrs, doc(cfg(feature = "load-onnxruntime")))]
+        pub fn load_once() -> LoadOnce {
+            LoadOnce::default()
+        }
+
+        /// ONNX Runtimeを初期化する。
+        ///
+        /// 一度成功したら以後は同じ参照を返す。
+        #[cfg(feature = "link-onnxruntime")]
+        #[cfg_attr(docsrs, doc(cfg(feature = "link-onnxruntime")))]
         pub async fn init_once() -> crate::Result<&'static Self> {
-            // TODO: ちゃんとエラーハンドリングする
-            let ort = super::blocking::Onnxruntime::init_once().expect("failed to load ONNX Runtime");
-            Ok(Self::from_blocking(ort))
+            let inner = crate::task::asyncify(super::blocking::Onnxruntime::init_once).await?;
+            Ok(Self::from_blocking(inner))
         }
 
         #[cfg(test)]
@@ -356,6 +373,31 @@ pub(crate) mod tokio {
         /// ONNX Runtimeとして利用可能なデバイスの情報を取得する。
         pub fn supported_devices(&self) -> crate::Result<SupportedDevices> {
             self.0.supported_devices()
+        }
+    }
+
+    /// [`Onnxruntime::load_once`]のビルダー。
+    #[cfg(feature = "load-onnxruntime")]
+    #[derive(Default)]
+    pub struct LoadOnce(super::blocking::LoadOnce);
+
+    #[cfg(feature = "load-onnxruntime")]
+    impl LoadOnce {
+        /// ONNX Runtimeのファイル名（モジュール名）もしくはファイルパスを指定する。
+        ///
+        /// `dlopen`/[`LoadLibraryExW`]の引数に使われる。デフォルト
+        /// は[`Onnxruntime::LIB_VERSIONED_FILENAME`]。
+        ///
+        /// [`LoadLibraryExW`]:
+        /// https://learn.microsoft.com/en-us/windows/win32/api/libloaderapi/nf-libloaderapi-loadlibraryexw
+        pub fn filename(self, filename: impl Into<std::ffi::OsString>) -> Self {
+            Self(self.0.filename(filename))
+        }
+
+        /// 実行する。
+        pub async fn exec(self) -> crate::Result<&'static Onnxruntime> {
+            let inner = crate::task::asyncify(|| self.0.exec()).await?;
+            Ok(Onnxruntime::from_blocking(inner))
         }
     }
 }

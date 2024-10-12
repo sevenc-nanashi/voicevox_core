@@ -34,7 +34,7 @@ pub unsafe extern "C" fn voicevox_synthesizer_new_wasm(
     open_jtalk: &OpenJtalkRc,
     options_acceleration_mode: VoicevoxAccelerationMode,
     options_cpu_num_threads: i32,
-    out_synthesizer: NonNull<Box<VoicevoxSynthesizer>>,
+    out_synthesizer: NonNull<NonNull<VoicevoxSynthesizer>>,
 ) -> VoicevoxResultCode {
     let options = VoicevoxInitializeOptions {
         acceleration_mode: options_acceleration_mode.into(),

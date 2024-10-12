@@ -19,7 +19,7 @@ pub async fn synthesizer_with_sample_voice_model(
             .filename(onnxruntime_dylib_path)
             .exec()
             .await?,
-        #[cfg(feature = "link-onnxruntime")]
+        #[cfg(any(feature = "link-onnxruntime"))]
         crate::nonblocking::Onnxruntime::init_once().await?,
         crate::nonblocking::OpenJtalk::new(open_jtalk_dic_dir).await?,
         &InitializeOptions {

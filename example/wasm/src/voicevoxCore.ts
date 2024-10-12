@@ -279,7 +279,12 @@ const voiceModelFinalizer = new FinalizationRegistry(
     const vvc = _voicevoxCore;
     if (vvc) {
       console.log("Deleting voice model", pointer);
-      vvc.ccall("voicevox_voice_model_delete", "number", ["number"], [pointer]);
+      vvc.ccall(
+        "voicevox_voice_model_file_close",
+        "number",
+        ["number"],
+        [pointer],
+      );
     }
   },
 );
@@ -292,7 +297,7 @@ export class VoiceModel {
     throwIfError(
       vvc,
       vvc.ccall(
-        "voicevox_voice_model_new_from_path",
+        "voicevox_voice_model_file_open",
         "number",
         ["string", "number"],
         [`/data/voice_model_${nonce}.vvm`, returnPtr],
@@ -309,7 +314,7 @@ export class VoiceModel {
   async metas() {
     const vvc = await voicevoxCore();
     const returnPtr = vvc.ccall(
-      "voicevox_voice_model_get_metas_json",
+      "voicevox_voice_model_file_create_metas_json",
       "number",
       ["number"],
       [this._pointer],

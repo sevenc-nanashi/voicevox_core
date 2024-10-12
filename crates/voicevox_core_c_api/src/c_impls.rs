@@ -55,12 +55,6 @@ impl VoicevoxOnnxruntime {
         let inner = voicevox_core::blocking::Onnxruntime::init_once()?;
         Ok(Self::new(inner))
     }
-
-    #[cfg(target_family = "wasm")]
-    pub(crate) fn init_once() -> CApiResult<&'static Self> {
-        let inner = voicevox_core::blocking::Onnxruntime::init_once()?;
-        Ok(Self::new(inner))
-    }
 }
 
 #[cfg(feature = "load-onnxruntime")]

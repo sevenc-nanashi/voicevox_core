@@ -112,7 +112,7 @@ impl SupportedDevices {
     /// assert!(!SupportedDevices::THIS.cuda);
     /// assert!(!SupportedDevices::THIS.dml);
     /// ```
-    pub const THIS: Self = if cfg!(feature = "load-onnxruntime") || cfg!(target_family = "wasm") {
+    pub const THIS: Self = if cfg!(any(feature = "load-onnxruntime", target_family = "wasm")) {
         Self {
             cpu: true,
             cuda: true,

@@ -24,14 +24,16 @@
 
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
-#[cfg(not(any(feature = "load-onnxruntime", feature = "link-onnxruntime", target_family = "wasm")))]
-compile_error!("either `load-onnxruntime` or `link-onnxruntime` must be enabled in non-wasm build");
+#[cfg(not(any(feature = "load-onnxruntime", feature = "link-onnxruntime")))]
+compile_error!("either `load-onnxruntime` or `link-onnxruntime` must be enabled");
 
-#[cfg(not(doc))]
+#[cfg(all(not(doc), feature = "load-onnxruntime", feature = "link-onnxruntime"))]
+compile_error!("`load-onnxruntime` and `link-onnxruntime` cannot be enabled at the same time");
+#[cfg(all(feature = "load-onnxruntime", target_family = "wasm"))]
+compile_error!("`load-onnxruntime` cannot be enabled on WASM target");
+
+#[cfg(not(any(doc, target_family = "wasm")))]
 const _: () = {
-    #[cfg(all(feature = "load-onnxruntime", feature = "link-onnxruntime"))]
-    compile_error!("`load-onnxruntime` and `link-onnxruntime` cannot be enabled at the same time");
-
     // Rust APIでvoicevox-ortを他のクレートが利用する可能性を考え、voicevox-ort側とfeatureがズレ
     // ないようにする
 

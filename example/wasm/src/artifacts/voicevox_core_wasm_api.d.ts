@@ -54,14 +54,14 @@ type Functions = {
   voicevox_synthesizer_delete: (
     pointer: Pointer<"VoicevoxSynthesizer">,
   ) => void;
-  voicevox_voice_model_new_from_path: (
+  voicevox_voice_model_file_open: (
     path: string,
     pointer: Pointer<Pointer<"VoicevoxVoiceModel">>,
   ) => VoicevoxResultCode;
-  voicevox_voice_model_get_metas_json: (
+  voicevox_voice_model_file_create_metas_json: (
     pointer: Pointer<"VoicevoxVoiceModel">,
   ) => Pointer<"string">;
-  voicevox_voice_model_delete: (
+  voicevox_voice_model_file_close: (
     pointer: Pointer<"VoicevoxVoiceModel">,
   ) => VoicevoxResultCode;
   voicevox_json_free: (pointer: Pointer<"string">) => void;
