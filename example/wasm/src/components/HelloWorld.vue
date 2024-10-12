@@ -50,7 +50,7 @@ const synthesizerTts = async () => {
 };
 const benchmark = async () => {
   const results = [];
-  for (let j = 0; j < 5; j++) {
+  for (let j = 0; j < 1; j++) {
     for (let i = 1; i <= 10; i++) {
       const text = "あいうえお".repeat(i);
       const before = performance.now();
