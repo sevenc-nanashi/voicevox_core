@@ -14,19 +14,27 @@ if TYPE_CHECKING:
         VoiceModelId,
     )
 
-class VoiceModel:
+class VoiceModelFile:
     """
-    音声モデル。"""
+    音声モデルファイル。"""
 
     @staticmethod
-    async def from_path(path: Union[str, PathLike[str]]) -> VoiceModel:
+    async def open(path: Union[str, PathLike[str]]) -> VoiceModelFile:
         """
-        VVMファイルから ``VoiceModel`` を生成する。
+        VVMファイルを開く。
 
         Parameters
         ----------
         path
             VVMファイルへのパス。
+        """
+        ...
+    async def close(self) -> None:
+        """
+        VVMファイルを閉じる。
+
+        このメソッドが呼ばれた段階で :attr:`Synthesizer.load_voice_model`
+        からのアクセスが継続中の場合、アクセスが終わるまで待つ。
         """
         ...
     @property
@@ -37,6 +45,8 @@ class VoiceModel:
     def metas(self) -> List[SpeakerMeta]:
         """メタ情報。"""
         ...
+    async def __aenter__(self) -> "VoiceModelFile": ...
+    async def __aexit__(self, exc_type, exc_value, traceback) -> None: ...
 
 class Onnxruntime:
     """
@@ -160,8 +170,8 @@ class Synthesizer:
         cpu_num_threads: int = 0,
     ) -> None: ...
     def __repr__(self) -> str: ...
-    def __enter__(self) -> "Synthesizer": ...
-    def __exit__(self, exc_type, exc_value, traceback) -> None: ...
+    async def __aenter__(self) -> "Synthesizer": ...
+    async def __aexit__(self, exc_type, exc_value, traceback) -> None: ...
     @property
     def onnxruntime(self) -> Onnxruntime:
         """ONNX Runtime。"""
@@ -174,7 +184,7 @@ class Synthesizer:
     def metas(self) -> List[SpeakerMeta]:
         """メタ情報。"""
         ...
-    async def load_voice_model(self, model: VoiceModel) -> None:
+    async def load_voice_model(self, model: VoiceModelFile) -> None:
         """
         モデルを読み込む。
 
@@ -411,7 +421,7 @@ class Synthesizer:
         WAVデータ。
         """
         ...
-    def close(self) -> None: ...
+    async def close(self) -> None: ...
 
 class UserDict:
     """ユーザー辞書。"""
@@ -421,7 +431,7 @@ class UserDict:
         """このオプジェクトの :class:`dict` としての表現。"""
         ...
     def __init__(self) -> None: ...
-    async def load(self, path: str) -> None:
+    async def load(self, path: Union[str, PathLike[str]]) -> None:
         """ファイルに保存されたユーザー辞書を読み込む。
 
         Parameters
@@ -430,7 +440,7 @@ class UserDict:
             ユーザー辞書のパス。
         """
         ...
-    async def save(self, path: str) -> None:
+    async def save(self, path: Union[str, PathLike[str]]) -> None:
         """
         ユーザー辞書をファイルに保存する。
 

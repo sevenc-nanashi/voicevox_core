@@ -9,7 +9,7 @@ use itertools::iproduct;
 use crate::{
     error::{ErrorRepr, LoadModelError, LoadModelErrorKind, LoadModelResult},
     infer::{
-        domains::{InferenceDomainMap, TalkDomain, TalkOperation},
+        domains::{inference_domain_map_values, InferenceDomainMap, TalkDomain},
         session_set::{InferenceSessionCell, InferenceSessionSet},
         InferenceDomain, InferenceInputSignature, InferenceRuntime, InferenceSessionOptions,
         InferenceSignature,
@@ -271,7 +271,7 @@ impl<R: InferenceRuntime> LoadedModels<R> {
     }
 
     fn remove(&mut self, model_id: VoiceModelId) -> Result<()> {
-        if self.0.remove(&model_id).is_none() {
+        if self.0.shift_remove(&model_id).is_none() {
             return Err(ErrorRepr::ModelNotFound { model_id }.into());
         }
         Ok(())
@@ -338,10 +338,11 @@ impl InferenceDomainMap<ModelBytesWithInnerVoiceIdsByDomain> {
     }
 }
 
-type SessionOptionsByDomain = (EnumMap<TalkOperation, InferenceSessionOptions>,);
+type SessionOptionsByDomain =
+    inference_domain_map_values!(for<D> EnumMap<D::Operation, InferenceSessionOptions>);
 
 type SessionSetsWithInnerVoiceIdsByDomain<R> =
-    (Option<(StyleIdToInnerVoiceId, InferenceSessionSet<R, TalkDomain>)>,);
+    inference_domain_map_values!(for<D> Option<(StyleIdToInnerVoiceId, InferenceSessionSet<R, D>)>);
 
 #[cfg(test)]
 mod tests {
@@ -408,7 +409,7 @@ mod tests {
                 talk: enum_map!(_ => InferenceSessionOptions::new(0, DeviceSpec::Cpu)),
             },
         );
-        let model = &crate::tokio::VoiceModel::sample().await.unwrap();
+        let model = &crate::nonblocking::VoiceModelFile::sample().await.unwrap();
         let model_contents = &model.read_inference_models().await.unwrap();
         let result = status.insert_model(model.header(), model_contents);
         assert_debug_fmt_eq!(Ok(()), result);
@@ -424,7 +425,7 @@ mod tests {
                 talk: enum_map!(_ => InferenceSessionOptions::new(0, DeviceSpec::Cpu)),
             },
         );
-        let vvm = &crate::tokio::VoiceModel::sample().await.unwrap();
+        let vvm = &crate::nonblocking::VoiceModelFile::sample().await.unwrap();
         let model_header = vvm.header();
         let model_contents = &vvm.read_inference_models().await.unwrap();
         assert!(
