@@ -41,6 +41,15 @@ class StyleType(str, Enum):
     TALK = "talk"
     """音声合成クエリの作成と音声合成が可能。"""
 
+    SINGING_TEACHER = "singing_teacher"
+    """歌唱音声合成用のクエリの作成が可能。"""
+
+    FRAME_DECODE = "frame_decode"
+    """歌唱音声合成が可能。"""
+
+    SING = "sing"
+    """歌唱音声合成用のクエリの作成と歌唱音声合成が可能。"""
+
 
 @pydantic.dataclasses.dataclass
 class StyleMeta:
@@ -208,12 +217,18 @@ class AudioQuery:
     output_stereo: bool
     """音声データをステレオ出力するか否か。"""
 
+    pause_length: None = None
+    """句読点などの無音時間。 ``None`` のときは無視される。デフォルト値は ``None`` 。"""
+
+    pause_length_scale: float = 1.0
+    """読点などの無音時間（倍率）。デフォルト値は ``1.0`` 。"""
+
     kana: Optional[str] = None
     """
     [読み取り専用] AquesTalk風記法。
 
-    :func:`Synthesizer.audio_query` が返すもののみ ``str`` となる。入力としてのAudioQueryでは無視さ
-    れる。
+    :func:`Synthesizer.create_audio_query` が返すもののみ ``str`` となる。入力として
+    のAudioQueryでは無視される。
     """
 
 

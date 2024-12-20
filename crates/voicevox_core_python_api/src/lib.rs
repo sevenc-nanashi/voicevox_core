@@ -1,3 +1,8 @@
+#![expect(
+    non_local_definitions,
+    reason = "PyO3を≧0.21.0にすることで解決する予定"
+)]
+
 use std::{
     marker::PhantomData,
     mem,
@@ -12,7 +17,7 @@ use pyo3::{
     create_exception,
     exceptions::{PyException, PyKeyError, PyValueError},
     pyfunction, pymodule,
-    types::{PyList, PyModule},
+    types::{PyBytes, PyList, PyModule},
     wrap_pyfunction, Py, PyObject, PyResult, PyTypeInfo, Python,
 };
 use voicevox_core::__internal::interop::raii::MaybeClosed;
@@ -25,6 +30,7 @@ fn rust(py: Python<'_>, module: &PyModule) -> PyResult<()> {
     module.add("__version__", env!("CARGO_PKG_VERSION"))?;
     module.add_wrapped(wrap_pyfunction!(_validate_pronunciation))?;
     module.add_wrapped(wrap_pyfunction!(_to_zenkaku))?;
+    module.add_wrapped(wrap_pyfunction!(wav_from_s16le))?;
 
     add_exceptions(module)?;
 
@@ -34,6 +40,7 @@ fn rust(py: Python<'_>, module: &PyModule) -> PyResult<()> {
     blocking_module.add_class::<self::blocking::OpenJtalk>()?;
     blocking_module.add_class::<self::blocking::VoiceModelFile>()?;
     blocking_module.add_class::<self::blocking::UserDict>()?;
+    blocking_module.add_class::<self::blocking::AudioFeature>()?;
     module.add_and_register_submodule(blocking_module)?;
 
     let asyncio_module = PyModule::new(py, "voicevox_core._rust.asyncio")?;
@@ -200,7 +207,10 @@ trait RwLock: From<Self::Item> {
 
 impl<T> RwLock for std::sync::RwLock<T> {
     type Item = T;
-    type RwLockWriteGuard<'a> = std::sync::RwLockWriteGuard<'a, Self::Item> where Self: 'a;
+    type RwLockWriteGuard<'a>
+        = std::sync::RwLockWriteGuard<'a, Self::Item>
+    where
+        Self: 'a;
 
     fn try_read_(&self) -> Result<impl Deref<Target = Self::Item>, ()> {
         self.try_read().map_err(|e| match e {
@@ -227,7 +237,10 @@ impl<T> RwLock for std::sync::RwLock<T> {
 
 impl<T> RwLock for tokio::sync::RwLock<T> {
     type Item = T;
-    type RwLockWriteGuard<'a> = tokio::sync::RwLockWriteGuard<'a, Self::Item> where Self: 'a;
+    type RwLockWriteGuard<'a>
+        = tokio::sync::RwLockWriteGuard<'a, Self::Item>
+    where
+        Self: 'a;
 
     fn try_read_(&self) -> Result<impl Deref<Target = Self::Item>, ()> {
         self.try_read().map_err(|_| ())
@@ -262,11 +275,25 @@ fn _to_zenkaku(text: &str) -> PyResult<String> {
     Ok(voicevox_core::__internal::to_zenkaku(text))
 }
 
+#[pyfunction]
+fn wav_from_s16le<'py>(
+    pcm: &[u8],
+    sampling_rate: u32,
+    is_stereo: bool,
+    py: Python<'py>,
+) -> &'py PyBytes {
+    PyBytes::new(
+        py,
+        &voicevox_core::wav_from_s16le(pcm, sampling_rate, is_stereo),
+    )
+}
+
 mod blocking {
     use std::{ffi::OsString, path::PathBuf, sync::Arc};
 
     use camino::Utf8PathBuf;
     use pyo3::{
+        exceptions::{PyIndexError, PyValueError},
         pyclass, pymethods,
         types::{IntoPyDict as _, PyBytes, PyDict, PyList},
         Py, PyAny, PyObject, PyRef, PyResult, Python,
@@ -425,6 +452,24 @@ mod blocking {
     }
 
     #[pyclass]
+    pub(crate) struct AudioFeature {
+        audio: voicevox_core::blocking::AudioFeature,
+    }
+
+    #[pymethods]
+    impl AudioFeature {
+        #[getter]
+        fn frame_length(&self) -> usize {
+            self.audio.frame_length
+        }
+
+        #[getter]
+        fn frame_rate(&self) -> f64 {
+            self.audio.frame_rate
+        }
+    }
+
+    #[pyclass]
     pub(crate) struct Synthesizer {
         synthesizer: Closable<
             voicevox_core::blocking::Synthesizer<voicevox_core::blocking::OpenJtalk>,
@@ -527,7 +572,7 @@ mod blocking {
                 .is_loaded_voice_model(voice_model_id.into()))
         }
 
-        fn audio_query_from_kana<'py>(
+        fn create_audio_query_from_kana<'py>(
             &self,
             kana: &str,
             style_id: u32,
@@ -536,14 +581,14 @@ mod blocking {
             let synthesizer = self.synthesizer.read()?;
 
             let audio_query = synthesizer
-                .audio_query_from_kana(kana, StyleId::new(style_id))
+                .create_audio_query_from_kana(kana, StyleId::new(style_id))
                 .into_py_result(py)?;
 
             let class = py.import("voicevox_core")?.getattr("AudioQuery")?;
             crate::convert::to_pydantic_dataclass(audio_query, class)
         }
 
-        fn audio_query<'py>(
+        fn create_audio_query<'py>(
             &self,
             text: &str,
             style_id: u32,
@@ -552,7 +597,7 @@ mod blocking {
             let synthesizesr = self.synthesizer.read()?;
 
             let audio_query = synthesizesr
-                .audio_query(text, StyleId::new(style_id))
+                .create_audio_query(text, StyleId::new(style_id))
                 .into_py_result(py)?;
 
             let class = py.import("voicevox_core")?.getattr("AudioQuery")?;
@@ -640,6 +685,58 @@ mod blocking {
                 py,
                 |a, s| synthesizer.replace_mora_pitch(&a, s),
             )
+        }
+
+        #[pyo3(signature=(
+            audio_query,
+            style_id,
+            enable_interrogative_upspeak = TtsOptions::default().enable_interrogative_upspeak
+        ))]
+        fn precompute_render(
+            &self,
+            #[pyo3(from_py_with = "crate::convert::from_dataclass")] audio_query: AudioQuery,
+            style_id: u32,
+            enable_interrogative_upspeak: bool,
+            py: Python<'_>,
+        ) -> PyResult<AudioFeature> {
+            let audio = self
+                .synthesizer
+                .read()?
+                .precompute_render(
+                    &audio_query,
+                    StyleId::new(style_id),
+                    &SynthesisOptions {
+                        enable_interrogative_upspeak,
+                    },
+                )
+                .into_py_result(py)?;
+            Ok(AudioFeature { audio })
+        }
+
+        fn render<'py>(
+            &self,
+            audio: &AudioFeature,
+            start: usize,
+            stop: usize,
+            py: Python<'py>,
+        ) -> PyResult<&'py PyBytes> {
+            if start > audio.frame_length() || stop > audio.frame_length() {
+                return Err(PyIndexError::new_err(format!(
+                    "({start}, {stop}) is out of range for audio feature of length {len}",
+                    len = audio.frame_length(),
+                )));
+            }
+            if start > stop {
+                return Err(PyValueError::new_err(format!(
+                    "({start}, {stop}) is invalid range because start > end",
+                )));
+            }
+            let wav = &self
+                .synthesizer
+                .read()?
+                .render(&audio.audio, start..stop)
+                .into_py_result(py)?;
+            Ok(PyBytes::new(py, wav))
         }
 
         #[pyo3(signature=(
@@ -1062,9 +1159,12 @@ mod asyncio {
             py: Python<'py>,
         ) -> PyResult<&'py PyAny> {
             let model: VoiceModelFile = model.extract()?;
-            let synthesizer = self.synthesizer.read()?.clone();
+            let synthesizer = self.synthesizer.clone();
             pyo3_asyncio::tokio::future_into_py(py, async move {
-                let result = synthesizer.load_voice_model(&*model.model.read()?).await;
+                let result = synthesizer
+                    .read()?
+                    .load_voice_model(&*model.model.read()?)
+                    .await;
                 Python::with_gil(|py| result.into_py_result(py))
             })
         }
@@ -1090,20 +1190,21 @@ mod asyncio {
                 .is_loaded_voice_model(voice_model_id.into()))
         }
 
-        fn audio_query_from_kana<'py>(
+        fn create_audio_query_from_kana<'py>(
             &self,
             kana: &str,
             style_id: u32,
             py: Python<'py>,
         ) -> PyResult<&'py PyAny> {
-            let synthesizer = self.synthesizer.read()?.clone();
+            let synthesizer = self.synthesizer.clone();
             let kana = kana.to_owned();
             pyo3_asyncio::tokio::future_into_py_with_locals(
                 py,
                 pyo3_asyncio::tokio::get_current_locals(py)?,
                 async move {
                     let audio_query = synthesizer
-                        .audio_query_from_kana(&kana, StyleId::new(style_id))
+                        .read()?
+                        .create_audio_query_from_kana(&kana, StyleId::new(style_id))
                         .await;
 
                     Python::with_gil(|py| {
@@ -1118,19 +1219,22 @@ mod asyncio {
             )
         }
 
-        fn audio_query<'py>(
+        fn create_audio_query<'py>(
             &self,
             text: &str,
             style_id: u32,
             py: Python<'py>,
         ) -> PyResult<&'py PyAny> {
-            let synthesizer = self.synthesizer.read()?.clone();
+            let synthesizer = self.synthesizer.clone();
             let text = text.to_owned();
             pyo3_asyncio::tokio::future_into_py_with_locals(
                 py,
                 pyo3_asyncio::tokio::get_current_locals(py)?,
                 async move {
-                    let audio_query = synthesizer.audio_query(&text, StyleId::new(style_id)).await;
+                    let audio_query = synthesizer
+                        .read()?
+                        .create_audio_query(&text, StyleId::new(style_id))
+                        .await;
 
                     Python::with_gil(|py| {
                         let audio_query = audio_query.into_py_result(py)?;
@@ -1148,13 +1252,14 @@ mod asyncio {
             style_id: u32,
             py: Python<'py>,
         ) -> PyResult<&'py PyAny> {
-            let synthesizer = self.synthesizer.read()?.clone();
+            let synthesizer = self.synthesizer.clone();
             let kana = kana.to_owned();
             pyo3_asyncio::tokio::future_into_py_with_locals(
                 py,
                 pyo3_asyncio::tokio::get_current_locals(py)?,
                 async move {
                     let accent_phrases = synthesizer
+                        .read()?
                         .create_accent_phrases_from_kana(&kana, StyleId::new(style_id))
                         .await;
                     Python::with_gil(|py| {
@@ -1177,13 +1282,14 @@ mod asyncio {
             style_id: u32,
             py: Python<'py>,
         ) -> PyResult<&'py PyAny> {
-            let synthesizer = self.synthesizer.read()?.clone();
+            let synthesizer = self.synthesizer.clone();
             let text = text.to_owned();
             pyo3_asyncio::tokio::future_into_py_with_locals(
                 py,
                 pyo3_asyncio::tokio::get_current_locals(py)?,
                 async move {
                     let accent_phrases = synthesizer
+                        .read()?
                         .create_accent_phrases(&text, StyleId::new(style_id))
                         .await;
                     Python::with_gil(|py| {
@@ -1206,12 +1312,15 @@ mod asyncio {
             style_id: u32,
             py: Python<'py>,
         ) -> PyResult<&'py PyAny> {
-            let synthesizer = self.synthesizer.read()?.clone();
+            let synthesizer = self.synthesizer.clone();
             crate::convert::async_modify_accent_phrases(
                 accent_phrases,
                 StyleId::new(style_id),
                 py,
-                |a, s| async move { synthesizer.replace_mora_data(&a, s).await },
+                |a, s| async move {
+                    let result = synthesizer.read()?.replace_mora_data(&a, s).await;
+                    Python::with_gil(|py| result.into_py_result(py))
+                },
             )
         }
 
@@ -1221,12 +1330,15 @@ mod asyncio {
             style_id: u32,
             py: Python<'py>,
         ) -> PyResult<&'py PyAny> {
-            let synthesizer = self.synthesizer.read()?.clone();
+            let synthesizer = self.synthesizer.clone();
             crate::convert::async_modify_accent_phrases(
                 accent_phrases,
                 StyleId::new(style_id),
                 py,
-                |a, s| async move { synthesizer.replace_phoneme_length(&a, s).await },
+                |a, s| async move {
+                    let result = synthesizer.read()?.replace_phoneme_length(&a, s).await;
+                    Python::with_gil(|py| result.into_py_result(py))
+                },
             )
         }
 
@@ -1236,12 +1348,15 @@ mod asyncio {
             style_id: u32,
             py: Python<'py>,
         ) -> PyResult<&'py PyAny> {
-            let synthesizer = self.synthesizer.read()?.clone();
+            let synthesizer = self.synthesizer.clone();
             crate::convert::async_modify_accent_phrases(
                 accent_phrases,
                 StyleId::new(style_id),
                 py,
-                |a, s| async move { synthesizer.replace_mora_pitch(&a, s).await },
+                |a, s| async move {
+                    let result = synthesizer.read()?.replace_mora_pitch(&a, s).await;
+                    Python::with_gil(|py| result.into_py_result(py))
+                },
             )
         }
 
@@ -1253,12 +1368,13 @@ mod asyncio {
             enable_interrogative_upspeak: bool,
             py: Python<'py>,
         ) -> PyResult<&'py PyAny> {
-            let synthesizer = self.synthesizer.read()?.clone();
+            let synthesizer = self.synthesizer.clone();
             pyo3_asyncio::tokio::future_into_py_with_locals(
                 py,
                 pyo3_asyncio::tokio::get_current_locals(py)?,
                 async move {
                     let wav = synthesizer
+                        .read()?
                         .synthesis(
                             &audio_query,
                             StyleId::new(style_id),
@@ -1291,13 +1407,16 @@ mod asyncio {
             let options = TtsOptions {
                 enable_interrogative_upspeak,
             };
-            let synthesizer = self.synthesizer.read()?.clone();
+            let synthesizer = self.synthesizer.clone();
             let kana = kana.to_owned();
             pyo3_asyncio::tokio::future_into_py_with_locals(
                 py,
                 pyo3_asyncio::tokio::get_current_locals(py)?,
                 async move {
-                    let wav = synthesizer.tts_from_kana(&kana, style_id, &options).await;
+                    let wav = synthesizer
+                        .read()?
+                        .tts_from_kana(&kana, style_id, &options)
+                        .await;
 
                     Python::with_gil(|py| {
                         let wav = wav.into_py_result(py)?;
@@ -1323,13 +1442,13 @@ mod asyncio {
             let options = TtsOptions {
                 enable_interrogative_upspeak,
             };
-            let synthesizer = self.synthesizer.read()?.clone();
+            let synthesizer = self.synthesizer.clone();
             let text = text.to_owned();
             pyo3_asyncio::tokio::future_into_py_with_locals(
                 py,
                 pyo3_asyncio::tokio::get_current_locals(py)?,
                 async move {
-                    let wav = synthesizer.tts(&text, style_id, &options).await;
+                    let wav = synthesizer.read()?.tts(&text, style_id, &options).await;
 
                     Python::with_gil(|py| {
                         let wav = wav.into_py_result(py)?;

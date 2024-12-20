@@ -1,18 +1,22 @@
 use std::{
     collections::BTreeMap,
     fmt::{self, Display},
+    ops::Index,
     sync::Arc,
 };
 
 use derive_getters::Getters;
 use derive_more::Deref;
 use derive_new::new;
-use macros::IndexForFields;
+use enum_map::{Enum, EnumMap};
 use serde::{de, Deserialize, Deserializer, Serialize};
 use serde_with::{serde_as, DisplayFromStr};
 
 use crate::{
-    infer::domains::{inference_domain_map_values, InferenceDomainMap, TalkOperation},
+    infer::domains::{
+        inference_domain_map_values, FrameDecodeOperation, InferenceDomainMap,
+        SingingTeacherOperation, TalkOperation,
+    },
     StyleId, VoiceModelId,
 };
 
@@ -28,7 +32,7 @@ impl<'de> Deserialize<'de> for FormatVersionV1 {
 
         struct Visitor;
 
-        impl<'de> de::Visitor<'de> for Visitor {
+        impl de::Visitor<'_> for Visitor {
             type Value = FormatVersionV1;
 
             fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -81,24 +85,110 @@ pub struct Manifest {
 
 pub(crate) type ManifestDomains = inference_domain_map_values!(for<D> Option<D::Manifest>);
 
-#[derive(Deserialize, IndexForFields)]
+// TODO: #825 が終わったら`singing_teacher`と`frame_decode`のやつと統一する
+#[derive(Deserialize)]
 #[cfg_attr(test, derive(Default))]
-#[index_for_fields(TalkOperation)]
 pub(crate) struct TalkManifest {
-    #[index_for_fields(TalkOperation::PredictDuration)]
-    pub(crate) predict_duration_filename: Arc<str>,
-
-    #[index_for_fields(TalkOperation::PredictIntonation)]
-    pub(crate) predict_intonation_filename: Arc<str>,
-
-    #[index_for_fields(TalkOperation::GenerateFullIntermediate)]
-    pub(crate) generate_full_intermediate_filename: Arc<str>,
-
-    #[index_for_fields(TalkOperation::RenderAudioSegment)]
-    pub(crate) render_audio_segment_filename: Arc<str>,
+    #[serde(flatten)]
+    filenames: EnumMap<TalkOperationFilenameKey, Arc<str>>,
 
     #[serde(default)]
     pub(crate) style_id_to_inner_voice_id: StyleIdToInnerVoiceId,
+}
+
+#[derive(Deserialize)]
+#[cfg_attr(test, derive(Default))]
+pub(crate) struct SingingTeacherManifest {
+    #[serde(flatten)]
+    filenames: EnumMap<SingingTeacherOperationFilenameKey, Arc<str>>,
+
+    #[serde(default)]
+    pub(crate) style_id_to_inner_voice_id: StyleIdToInnerVoiceId,
+}
+
+#[derive(Deserialize)]
+#[cfg_attr(test, derive(Default))]
+pub(crate) struct FrameDecodeManifest {
+    #[serde(flatten)]
+    filenames: EnumMap<FrameDecodeOperationFilenameKey, Arc<str>>,
+
+    #[serde(default)]
+    pub(crate) style_id_to_inner_voice_id: StyleIdToInnerVoiceId,
+}
+
+// TODO: #825 では`TalkOperation`と統合する。`Index`の実装もderive_moreで委譲する
+#[derive(Enum, Deserialize)]
+pub(crate) enum TalkOperationFilenameKey {
+    #[serde(rename = "predict_duration_filename")]
+    PredictDuration,
+    #[serde(rename = "predict_intonation_filename")]
+    PredictIntonation,
+    #[serde(rename = "generate_full_intermediate_filename")]
+    GenerateFullIntermediate,
+    #[serde(rename = "render_audio_segment_filename")]
+    RenderAudioSegment,
+}
+
+impl Index<TalkOperation> for TalkManifest {
+    type Output = Arc<str>;
+
+    fn index(&self, index: TalkOperation) -> &Self::Output {
+        let key = match index {
+            TalkOperation::PredictDuration => TalkOperationFilenameKey::PredictDuration,
+            TalkOperation::PredictIntonation => TalkOperationFilenameKey::PredictIntonation,
+            TalkOperation::GenerateFullIntermediate => {
+                TalkOperationFilenameKey::GenerateFullIntermediate
+            }
+            TalkOperation::RenderAudioSegment => TalkOperationFilenameKey::RenderAudioSegment,
+        };
+        &self.filenames[key]
+    }
+}
+
+#[derive(Enum, Deserialize)]
+pub(crate) enum SingingTeacherOperationFilenameKey {
+    #[serde(rename = "predict_sing_consonant_length_filename")]
+    PredictSingConsonantLength,
+    #[serde(rename = "predict_sing_f0_filename")]
+    PredictSingF0,
+    #[serde(rename = "predict_sing_volume_filename")]
+    PredictSingVolume,
+}
+
+impl Index<SingingTeacherOperation> for SingingTeacherManifest {
+    type Output = Arc<str>;
+
+    fn index(&self, index: SingingTeacherOperation) -> &Self::Output {
+        let key = match index {
+            SingingTeacherOperation::PredictSingConsonantLength => {
+                SingingTeacherOperationFilenameKey::PredictSingConsonantLength
+            }
+            SingingTeacherOperation::PredictSingF0 => {
+                SingingTeacherOperationFilenameKey::PredictSingF0
+            }
+            SingingTeacherOperation::PredictSingVolume => {
+                SingingTeacherOperationFilenameKey::PredictSingVolume
+            }
+        };
+        &self.filenames[key]
+    }
+}
+
+#[derive(Enum, Deserialize)]
+pub(crate) enum FrameDecodeOperationFilenameKey {
+    #[serde(rename = "sf_decode_filename")]
+    SfDecode,
+}
+
+impl Index<FrameDecodeOperation> for FrameDecodeManifest {
+    type Output = Arc<str>;
+
+    fn index(&self, index: FrameDecodeOperation) -> &Self::Output {
+        let key = match index {
+            FrameDecodeOperation::SfDecode => FrameDecodeOperationFilenameKey::SfDecode,
+        };
+        &self.filenames[key]
+    }
 }
 
 #[serde_as]

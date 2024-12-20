@@ -9,7 +9,11 @@ use itertools::iproduct;
 use crate::{
     error::{ErrorRepr, LoadModelError, LoadModelErrorKind, LoadModelResult},
     infer::{
-        domains::{inference_domain_map_values, InferenceDomainMap, TalkDomain},
+        self,
+        domains::{
+            inference_domain_map_values, FrameDecodeDomain, InferenceDomainMap,
+            SingingTeacherDomain, TalkDomain,
+        },
         session_set::{InferenceSessionCell, InferenceSessionSet},
         InferenceDomain, InferenceInputSignature, InferenceRuntime, InferenceSessionOptions,
         InferenceSignature,
@@ -104,17 +108,18 @@ impl<R: InferenceRuntime> Status<R> {
     /// # Panics
     ///
     /// `self`が`model_id`を含んでいないとき、パニックする。
-    pub(crate) fn run_session<I>(
+    pub(crate) async fn run_session<A, I>(
         &self,
         model_id: VoiceModelId,
         input: I,
     ) -> Result<<I::Signature as InferenceSignature>::Output>
     where
+        A: infer::AsyncExt,
         I: InferenceInputSignature,
         <I::Signature as InferenceSignature>::Domain: InferenceDomainExt,
     {
         let sess = self.loaded_models.lock().unwrap().get(model_id);
-        sess.run(input)
+        sess.run::<A>(input).await
     }
 }
 
@@ -294,8 +299,10 @@ pub(crate) trait InferenceDomainExt: InferenceDomain {
 }
 
 #[duplicate_item(
-    T              field;
-    [ TalkDomain ] [ talk ];
+    T                        field;
+    [ TalkDomain ]           [ talk ];
+    [ SingingTeacherDomain ] [ singing_teacher ];
+    [ FrameDecodeDomain ]    [ frame_decode ];
 )]
 impl InferenceDomainExt for T {
     fn visit<R: InferenceRuntime>(
@@ -323,6 +330,8 @@ impl InferenceDomainMap<ModelBytesWithInnerVoiceIdsByDomain> {
             [
                 field;
                 [ talk ];
+                [ singing_teacher ];
+                [ frame_decode ];
             ]
             let field = self
                 .field
@@ -334,7 +343,11 @@ impl InferenceDomainMap<ModelBytesWithInnerVoiceIdsByDomain> {
                 .transpose()?;
         }
 
-        Ok(InferenceDomainMap { talk })
+        Ok(InferenceDomainMap {
+            talk,
+            singing_teacher,
+            frame_decode,
+        })
     }
 }
 
@@ -353,7 +366,9 @@ mod tests {
     use crate::{
         devices::{DeviceSpec, GpuSpec},
         infer::{
-            domains::{InferenceDomainMap, TalkOperation},
+            domains::{
+                FrameDecodeOperation, InferenceDomainMap, SingingTeacherOperation, TalkOperation,
+            },
             InferenceSessionOptions,
         },
         macros::tests::assert_debug_fmt_eq,
@@ -378,6 +393,14 @@ mod tests {
                 | TalkOperation::PredictIntonation
                 | TalkOperation::GenerateFullIntermediate => light_session_options,
                 TalkOperation::RenderAudioSegment => heavy_session_options,
+            },
+            singing_teacher: enum_map! {
+                SingingTeacherOperation::PredictSingConsonantLength
+                | SingingTeacherOperation::PredictSingF0
+                | SingingTeacherOperation::PredictSingVolume => light_session_options,
+            },
+            frame_decode: enum_map! {
+                FrameDecodeOperation::SfDecode => heavy_session_options,
             },
         };
         let status = Status::new(
@@ -412,11 +435,13 @@ mod tests {
             crate::blocking::Onnxruntime::from_test_util_data().unwrap(),
             InferenceDomainMap {
                 talk: enum_map!(_ => InferenceSessionOptions::new(0, DeviceSpec::Cpu)),
+                singing_teacher: enum_map!(_ => InferenceSessionOptions::new(0, DeviceSpec::Cpu)),
+                frame_decode: enum_map!(_ => InferenceSessionOptions::new(0, DeviceSpec::Cpu)),
             },
         );
         let model = &crate::nonblocking::VoiceModelFile::sample().await.unwrap();
-        let model_contents = &model.read_inference_models().await.unwrap();
-        let result = status.insert_model(model.header(), model_contents);
+        let model_contents = &model.inner().read_inference_models().await.unwrap();
+        let result = status.insert_model(model.inner().header(), model_contents);
         assert_debug_fmt_eq!(Ok(()), result);
         assert_eq!(1, status.loaded_models.lock().unwrap().0.len());
     }
@@ -428,11 +453,13 @@ mod tests {
             crate::blocking::Onnxruntime::from_test_util_data().unwrap(),
             InferenceDomainMap {
                 talk: enum_map!(_ => InferenceSessionOptions::new(0, DeviceSpec::Cpu)),
+                singing_teacher: enum_map!(_ => InferenceSessionOptions::new(0, DeviceSpec::Cpu)),
+                frame_decode: enum_map!(_ => InferenceSessionOptions::new(0, DeviceSpec::Cpu)),
             },
         );
         let vvm = &crate::nonblocking::VoiceModelFile::sample().await.unwrap();
-        let model_header = vvm.header();
-        let model_contents = &vvm.read_inference_models().await.unwrap();
+        let model_header = vvm.inner().header();
+        let model_contents = &vvm.inner().read_inference_models().await.unwrap();
         assert!(
             !status.is_loaded_model(model_header.manifest.id),
             "model should  not be loaded"

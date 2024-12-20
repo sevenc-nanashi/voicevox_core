@@ -1,6 +1,7 @@
 use std::{
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     ffi::CString,
+    num::NonZero,
     path::Path,
     ptr::NonNull,
     sync::{Arc, LazyLock},
@@ -24,14 +25,12 @@ use crate::{
 
 impl VoicevoxOnnxruntime {
     #[cfg(feature = "load-onnxruntime")]
-    pub(crate) fn lib_versioned_filename() -> &'static std::ffi::CStr {
-        to_cstr!(voicevox_core::blocking::Onnxruntime::LIB_VERSIONED_FILENAME)
-    }
+    pub(crate) const LIB_VERSIONED_FILENAME: &'static std::ffi::CStr =
+        to_cstr!(voicevox_core::blocking::Onnxruntime::LIB_VERSIONED_FILENAME);
 
     #[cfg(feature = "load-onnxruntime")]
-    pub(crate) fn lib_unversioned_filename() -> &'static std::ffi::CStr {
-        to_cstr!(voicevox_core::blocking::Onnxruntime::LIB_UNVERSIONED_FILENAME)
-    }
+    pub(crate) const LIB_UNVERSIONED_FILENAME: &'static std::ffi::CStr =
+        to_cstr!(voicevox_core::blocking::Onnxruntime::LIB_UNVERSIONED_FILENAME);
 
     #[ref_cast_custom]
     fn new(rust: &voicevox_core::blocking::Onnxruntime) -> &Self;
@@ -60,11 +59,11 @@ impl VoicevoxOnnxruntime {
 #[cfg(feature = "load-onnxruntime")]
 macro_rules! to_cstr {
     ($s:expr) => {{
-        const __RUST_STR: &str = $s;
-        static __C_STR: &[u8] = const_format::concatcp!(__RUST_STR, '\0').as_bytes();
-
-        std::ffi::CStr::from_bytes_with_nul(__C_STR)
-            .unwrap_or_else(|e| panic!("{__RUST_STR:?} should not contain `\\0`: {e}"))
+        static CSTR: &[u8] = const_format::concatcp!($s, '\0').as_bytes();
+        unsafe {
+            // SAFETY: added a nul with `concatcp!`
+            std::ffi::CStr::from_bytes_with_nul_unchecked(CSTR)
+        }
     }};
 }
 #[cfg(feature = "load-onnxruntime")]
@@ -145,17 +144,23 @@ fn metas_to_json(metas: &[SpeakerMeta]) -> CString {
 impl CApiObject for H {
     type RustApiObject = B;
 
-    fn heads() -> &'static std::sync::Mutex<Vec<Self>> {
-        static HEADS: std::sync::Mutex<Vec<H>> = std::sync::Mutex::new(vec![]);
+    fn known_addrs() -> &'static std::sync::Mutex<HashSet<NonZero<usize>>> {
+        static KNOWN_ADDRS: LazyLock<std::sync::Mutex<HashSet<NonZero<usize>>>> =
+            LazyLock::new(Default::default);
+        &KNOWN_ADDRS
+    }
+
+    fn heads() -> &'static boxcar::Vec<Self> {
+        static HEADS: boxcar::Vec<H> = boxcar::Vec::new();
         &HEADS
     }
 
     fn bodies() -> &'static std::sync::Mutex<
-        HashMap<usize, Arc<parking_lot::RwLock<Option<Self::RustApiObject>>>>,
+        HashMap<NonZero<usize>, Arc<parking_lot::RwLock<Option<Self::RustApiObject>>>>,
     > {
         #[expect(clippy::type_complexity, reason = "`CApiObject::bodies`と同様")]
         static BODIES: LazyLock<
-            std::sync::Mutex<HashMap<usize, Arc<parking_lot::RwLock<Option<B>>>>>,
+            std::sync::Mutex<HashMap<NonZero<usize>, Arc<parking_lot::RwLock<Option<B>>>>>,
         > = LazyLock::new(Default::default);
 
         &BODIES

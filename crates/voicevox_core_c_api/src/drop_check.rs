@@ -107,8 +107,6 @@ impl CStringDropChecker {
 mod tests {
     use std::ffi::{c_char, CStr};
 
-    use cstr::cstr;
-
     use super::CStringDropChecker;
 
     #[test]
@@ -118,7 +116,7 @@ mod tests {
     )]
     fn it_denies_duplicated_char_ptr() {
         let checker = CStringDropChecker::new();
-        let s = cstr!("").to_owned();
+        let s = c"".to_owned();
         checker.whitelist(checker.whitelist(s));
     }
 
@@ -128,7 +126,7 @@ mod tests {
     )]
     fn it_denies_unknown_char_ptr() {
         let checker = CStringDropChecker::new();
-        let s = CStr::from_bytes_with_nul(b"\0").unwrap().to_owned();
+        let s = c"".to_owned();
         checker.check(s.into_raw());
     }
 
@@ -141,6 +139,6 @@ mod tests {
         checker.blacklist(STATIC);
         checker.check(STATIC.as_ptr() as *mut c_char);
 
-        static STATIC: &CStr = unsafe { CStr::from_bytes_with_nul_unchecked(b"\0") };
+        static STATIC: &CStr = c"";
     }
 }

@@ -1,6 +1,6 @@
 //! 音声モデル（ VVM ファイル）。
 //!
-//! VVM ファイルの定義と形式は[ドキュメント](../../../docs/vvm.md)を参照。
+//! VVM ファイルの定義と形式は[ドキュメント](../../../docs/guide/dev/vvm.md)を参照。
 
 use std::{
     collections::HashMap,
@@ -11,7 +11,7 @@ use std::{
 use anyhow::{anyhow, Context as _};
 use derive_more::From;
 use easy_ext::ext;
-use enum_map::{enum_map, EnumMap};
+use enum_map::{Enum, EnumMap};
 use futures_io::{AsyncBufRead, AsyncRead, AsyncSeek};
 use futures_util::future::{OptionFuture, TryFutureExt as _};
 use itertools::Itertools as _;
@@ -23,7 +23,10 @@ use crate::{
     asyncs::{Async, Mutex as _},
     error::{LoadModelError, LoadModelErrorKind, LoadModelResult},
     infer::{
-        domains::{inference_domain_map_values, InferenceDomainMap, TalkDomain, TalkOperation},
+        domains::{
+            inference_domain_map_values, FrameDecodeDomain, InferenceDomainMap,
+            SingingTeacherDomain, TalkDomain,
+        },
         InferenceDomain,
     },
     manifest::{Manifest, ManifestDomains, StyleIdToInnerVoiceId},
@@ -62,8 +65,8 @@ impl VoiceModelId {
 }
 
 #[self_referencing]
-struct Inner<A: Async> {
-    header: VoiceModelHeader,
+pub(crate) struct Inner<A: Async> {
+    header: Arc<VoiceModelHeader>,
 
     #[borrows(header)]
     #[not_covariant]
@@ -126,11 +129,12 @@ impl<A: Async> Inner<A> {
             )
         })?;
 
-        let header = VoiceModelHeader::new(manifest, metas, path)?;
+        let header = VoiceModelHeader::new(manifest, metas, path)?.into();
 
-        InnerTryBuilder {
+        return InnerTryBuilder {
             header,
-            inference_model_entries_builder: |VoiceModelHeader { manifest, .. }| {
+            inference_model_entries_builder: |header| {
+                let VoiceModelHeader { manifest, .. } = &**header;
                 manifest
                     .domains()
                     .each_ref()
@@ -138,21 +142,44 @@ impl<A: Async> Inner<A> {
                         talk: |talk| {
                             talk.as_ref()
                                 .map(|manifest| {
-                                    let indices = enum_map! {
-                                        TalkOperation::PredictDuration => {
-                                            find_entry_index(&manifest.predict_duration_filename)?
-                                        }
-                                        TalkOperation::PredictIntonation => {
-                                            find_entry_index(&manifest.predict_intonation_filename)?
-                                        }
-                                        TalkOperation::GenerateFullIntermediate => {
-                                            find_entry_index(&manifest.generate_full_intermediate_filename)?
-                                        }
-                                        TalkOperation::RenderAudioSegment => {
-                                            find_entry_index(&manifest.render_audio_segment_filename)?
-                                        }
-                                    };
-
+                                    let indices = EnumMap::from_fn(|k| &manifest[k])
+                                        .try_map(|_, s| find_entry_index(s))?;
+                                    Ok(InferenceModelEntry { indices, manifest })
+                                })
+                                .transpose()
+                                .map_err(move |source| {
+                                    error(
+                                        LoadModelErrorKind::ReadZipEntry {
+                                            filename: MANIFEST_FILENAME.to_owned(),
+                                        },
+                                        source,
+                                    )
+                                })
+                        },
+                        singing_teacher: |singing_teacher| {
+                            singing_teacher
+                                .as_ref()
+                                .map(|manifest| {
+                                    let indices = EnumMap::from_fn(|k| &manifest[k])
+                                        .try_map(|_, s| find_entry_index(s))?;
+                                    Ok(InferenceModelEntry { indices, manifest })
+                                })
+                                .transpose()
+                                .map_err(move |source| {
+                                    error(
+                                        LoadModelErrorKind::ReadZipEntry {
+                                            filename: MANIFEST_FILENAME.to_owned(),
+                                        },
+                                        source,
+                                    )
+                                })
+                        },
+                        frame_decode: |frame_decode| {
+                            frame_decode
+                                .as_ref()
+                                .map(|manifest| {
+                                    let indices = EnumMap::from_fn(|k| &manifest[k])
+                                        .try_map(|_, s| find_entry_index(s))?;
                                     Ok(InferenceModelEntry { indices, manifest })
                                 })
                                 .transpose()
@@ -171,7 +198,26 @@ impl<A: Async> Inner<A> {
             },
             zip: zip.into_inner().into_inner().into(),
         }
-        .try_build()
+        .try_build();
+
+        #[ext]
+        impl<K: Enum, V> EnumMap<K, V> {
+            fn try_map<V2, E>(
+                self,
+                f: impl FnMut(K, V) -> Result<V2, E>,
+            ) -> Result<EnumMap<K, V2>, E> {
+                let mut elems = self
+                    .map(f)
+                    .into_iter()
+                    .map(|(_, r)| r.map(Some))
+                    .collect::<Result<Vec<_>, _>>()?;
+
+                Ok(EnumMap::<K, _>::from_fn(|key| {
+                    let key = key.into_usize();
+                    elems[key].take().expect("each `key` should be distinct")
+                }))
+            }
+        }
     }
 
     fn id(&self) -> VoiceModelId {
@@ -182,11 +228,11 @@ impl<A: Async> Inner<A> {
         &self.borrow_header().metas
     }
 
-    fn header(&self) -> &VoiceModelHeader {
+    pub(crate) fn header(&self) -> &Arc<VoiceModelHeader> {
         self.borrow_header()
     }
 
-    async fn read_inference_models(
+    pub(crate) async fn read_inference_models(
         &self,
     ) -> LoadModelResult<InferenceDomainMap<ModelBytesWithInnerVoiceIdsByDomain>> {
         let path = &self.borrow_header().path;
@@ -218,36 +264,78 @@ impl<A: Async> Inner<A> {
             }};
         }
 
-        let InferenceDomainMap { talk } =
-            self.with_inference_model_entries(|inference_model_entries| {
-                inference_model_entries.each_ref().map(InferenceDomainMap {
-                    talk: |talk| {
-                        talk.as_ref()
-                            .map(|InferenceModelEntry { indices, manifest }| {
-                                (
-                                    indices.map(|op, i| (i, manifest[op].clone())),
-                                    manifest.style_id_to_inner_voice_id.clone(),
-                                )
-                            })
-                    },
-                })
-            });
+        let InferenceDomainMap {
+            talk,
+            singing_teacher,
+            frame_decode,
+        } = self.with_inference_model_entries(|inference_model_entries| {
+            inference_model_entries.each_ref().map(InferenceDomainMap {
+                talk: |talk| {
+                    talk.as_ref()
+                        .map(|InferenceModelEntry { indices, manifest }| {
+                            (
+                                indices.map(|op, i| (i, manifest[op].clone())),
+                                manifest.style_id_to_inner_voice_id.clone(),
+                            )
+                        })
+                },
+                singing_teacher: |singing_teacher| {
+                    singing_teacher
+                        .as_ref()
+                        .map(|InferenceModelEntry { indices, manifest }| {
+                            (
+                                indices.map(|op, i| (i, manifest[op].clone())),
+                                manifest.style_id_to_inner_voice_id.clone(),
+                            )
+                        })
+                },
+                frame_decode: |frame_decode| {
+                    frame_decode
+                        .as_ref()
+                        .map(|InferenceModelEntry { indices, manifest }| {
+                            (
+                                indices.map(|op, i| (i, manifest[op].clone())),
+                                manifest.style_id_to_inner_voice_id.clone(),
+                            )
+                        })
+                },
+            })
+        });
 
-        let talk = OptionFuture::from(talk.map(
-            |(entries, style_id_to_inner_voice_id)| async move {
-                let [predict_duration, predict_intonation, predict_spectrogram, run_vocoder] =
+        let talk = OptionFuture::from(talk.map(|(entries, style_id_to_inner_voice_id)| async {
+            let [predict_duration, predict_intonation, predict_spectrogram, run_vocoder] =
+                entries.into_array();
+
+            let predict_duration = read_file!(predict_duration);
+            let predict_intonation = read_file!(predict_intonation);
+            let predict_spectrogram = read_file!(predict_spectrogram);
+            let run_vocoder = read_file!(run_vocoder);
+
+            let model_bytes = EnumMap::from_array([
+                predict_duration,
+                predict_intonation,
+                predict_spectrogram,
+                run_vocoder,
+            ]);
+
+            Ok((style_id_to_inner_voice_id, model_bytes))
+        }))
+        .await
+        .transpose()?;
+
+        let singing_teacher = OptionFuture::from(singing_teacher.map(
+            |(entries, style_id_to_inner_voice_id)| async {
+                let [predict_sing_consonant_length, predict_sing_f0, predict_sing_volume] =
                     entries.into_array();
 
-                let predict_duration = read_file!(predict_duration);
-                let predict_intonation = read_file!(predict_intonation);
-                let predict_spectrogram = read_file!(predict_spectrogram);
-                let run_vocoder = read_file!(run_vocoder);
+                let predict_sing_consonant_length = read_file!(predict_sing_consonant_length);
+                let predict_sing_f0 = read_file!(predict_sing_f0);
+                let predict_sing_volume = read_file!(predict_sing_volume);
 
                 let model_bytes = EnumMap::from_array([
-                    predict_duration,
-                    predict_intonation,
-                    predict_spectrogram,
-                    run_vocoder,
+                    predict_sing_consonant_length,
+                    predict_sing_f0,
+                    predict_sing_volume,
                 ]);
 
                 Ok((style_id_to_inner_voice_id, model_bytes))
@@ -256,7 +344,25 @@ impl<A: Async> Inner<A> {
         .await
         .transpose()?;
 
-        Ok(InferenceDomainMap { talk })
+        let frame_decode = OptionFuture::from(frame_decode.map(
+            |(entries, style_id_to_inner_voice_id)| async {
+                let [sf_decode] = entries.into_array();
+
+                let sf_decode = read_file!(sf_decode);
+
+                let model_bytes = EnumMap::from_array([sf_decode]);
+
+                Ok((style_id_to_inner_voice_id, model_bytes))
+            },
+        ))
+        .await
+        .transpose()?;
+
+        Ok(InferenceDomainMap {
+            talk,
+            singing_teacher,
+            frame_decode,
+        })
     }
 }
 
@@ -389,9 +495,15 @@ impl InferenceDomainMap<ManifestDomains> {
     ///
     /// 例えば`self.talk`が`None`のとき、`StyleType::Talk`に対して`false`を返す。
     fn accepts(&self, style_type: StyleType) -> bool {
-        let Self { talk } = self;
+        let Self {
+            talk,
+            singing_teacher,
+            frame_decode,
+        } = self;
 
-        return TalkDomain::contains(style_type).implies(|| talk.is_some());
+        return TalkDomain::contains(style_type).implies(|| talk.is_some())
+            && SingingTeacherDomain::contains(style_type).implies(|| singing_teacher.is_some())
+            && FrameDecodeDomain::contains(style_type).implies(|| frame_decode.is_some());
 
         #[ext]
         impl<D: InferenceDomain> D {
@@ -412,12 +524,9 @@ impl InferenceDomainMap<ManifestDomains> {
 pub(crate) mod blocking {
     use std::path::Path;
 
-    use crate::{
-        asyncs::SingleTasked, error::LoadModelResult, future::FutureExt as _,
-        infer::domains::InferenceDomainMap, VoiceModelMeta,
-    };
+    use crate::{asyncs::SingleTasked, future::FutureExt as _, VoiceModelMeta};
 
-    use super::{Inner, ModelBytesWithInnerVoiceIdsByDomain, VoiceModelHeader, VoiceModelId};
+    use super::{Inner, VoiceModelId};
 
     /// 音声モデルファイル。
     ///
@@ -425,15 +534,13 @@ pub(crate) mod blocking {
     pub struct VoiceModelFile(Inner<SingleTasked>);
 
     impl self::VoiceModelFile {
-        pub(crate) fn read_inference_models(
-            &self,
-        ) -> LoadModelResult<InferenceDomainMap<ModelBytesWithInnerVoiceIdsByDomain>> {
-            self.0.read_inference_models().block_on()
-        }
-
         /// VVMファイルを開く。
         pub fn open(path: impl AsRef<Path>) -> crate::Result<Self> {
             Inner::open(path).block_on().map(Self)
+        }
+
+        pub(crate) fn inner(&self) -> &Inner<SingleTasked> {
+            &self.0
         }
 
         /// ID。
@@ -445,22 +552,15 @@ pub(crate) mod blocking {
         pub fn metas(&self) -> &VoiceModelMeta {
             self.0.metas()
         }
-
-        pub(crate) fn header(&self) -> &VoiceModelHeader {
-            self.0.header()
-        }
     }
 }
 
 pub(crate) mod nonblocking {
     use std::path::Path;
 
-    use crate::{
-        asyncs::BlockingThreadPool, error::LoadModelResult, infer::domains::InferenceDomainMap,
-        Result, VoiceModelMeta,
-    };
+    use crate::{asyncs::BlockingThreadPool, Result, VoiceModelMeta};
 
-    use super::{Inner, ModelBytesWithInnerVoiceIdsByDomain, VoiceModelHeader, VoiceModelId};
+    use super::{Inner, VoiceModelId};
 
     /// 音声モデルファイル。
     ///
@@ -475,12 +575,6 @@ pub(crate) mod nonblocking {
     pub struct VoiceModelFile(Inner<BlockingThreadPool>);
 
     impl self::VoiceModelFile {
-        pub(crate) async fn read_inference_models(
-            &self,
-        ) -> LoadModelResult<InferenceDomainMap<ModelBytesWithInnerVoiceIdsByDomain>> {
-            self.0.read_inference_models().await
-        }
-
         /// VVMファイルを開く。
         pub async fn open(path: impl AsRef<Path>) -> Result<Self> {
             Inner::open(path).await.map(Self)
@@ -489,6 +583,10 @@ pub(crate) mod nonblocking {
         /// VVMファイルを閉じる。
         pub async fn close(self) {
             self.0.into_heads().zip.into_inner().close().await;
+        }
+
+        pub(crate) fn inner(&self) -> &Inner<BlockingThreadPool> {
+            &self.0
         }
 
         /// ID。
@@ -500,10 +598,6 @@ pub(crate) mod nonblocking {
         pub fn metas(&self) -> &VoiceModelMeta {
             self.0.metas()
         }
-
-        pub(crate) fn header(&self) -> &VoiceModelHeader {
-            self.0.header()
-        }
     }
 }
 
@@ -514,7 +608,7 @@ mod tests {
 
     use crate::{
         infer::domains::InferenceDomainMap,
-        manifest::{ManifestDomains, TalkManifest},
+        manifest::{FrameDecodeManifest, ManifestDomains, SingingTeacherManifest, TalkManifest},
         SpeakerMeta, StyleType,
     };
 
@@ -522,6 +616,8 @@ mod tests {
     #[case(
         &InferenceDomainMap {
             talk: None,
+            singing_teacher: None,
+            frame_decode: None,
         },
         &[],
         Ok(())
@@ -529,6 +625,8 @@ mod tests {
     #[case(
         &InferenceDomainMap {
             talk: Some(TalkManifest::default()),
+            singing_teacher: Some(SingingTeacherManifest::default()),
+            frame_decode: Some(FrameDecodeManifest::default()),
         },
         &[speaker(&[StyleType::Talk])],
         Ok(())
@@ -536,6 +634,8 @@ mod tests {
     #[case(
         &InferenceDomainMap {
             talk: Some(TalkManifest::default()),
+            singing_teacher: Some(SingingTeacherManifest::default()),
+            frame_decode: Some(FrameDecodeManifest::default()),
         },
         &[speaker(&[StyleType::Talk, StyleType::Sing])],
         Ok(())
@@ -543,6 +643,8 @@ mod tests {
     #[case(
         &InferenceDomainMap {
             talk: None,
+            singing_teacher: None,
+            frame_decode: None,
         },
         &[speaker(&[StyleType::Talk])],
         Err(())

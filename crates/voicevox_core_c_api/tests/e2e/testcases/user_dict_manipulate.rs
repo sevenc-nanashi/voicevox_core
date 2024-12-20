@@ -10,7 +10,6 @@ use assert_cmd::assert::AssertResult;
 use tempfile::NamedTempFile;
 use uuid::Uuid;
 
-use cstr::cstr;
 use libloading::Library;
 use serde::{Deserialize, Serialize};
 use test_util::c_api::{self, CApi, VoicevoxResultCode, VoicevoxUserDict, VoicevoxUserDictWord};
@@ -30,9 +29,9 @@ impl assert_cdylib::TestCase for TestCase {
     unsafe fn exec(&self, lib: Library) -> anyhow::Result<()> {
         let lib = CApi::from_library(lib)?;
 
-        let get_json = |dict: &*mut VoicevoxUserDict| -> String {
+        let get_json = |dict: *const VoicevoxUserDict| -> String {
             let mut json = MaybeUninit::uninit();
-            assert_ok(lib.voicevox_user_dict_to_json((*dict) as *const _, json.as_mut_ptr()));
+            assert_ok(lib.voicevox_user_dict_to_json(dict, json.as_mut_ptr()));
 
             let ret = CStr::from_ptr(json.assume_init())
                 .to_str()
@@ -48,9 +47,7 @@ impl assert_cdylib::TestCase for TestCase {
 
         let add_word = |dict: *const VoicevoxUserDict, word: &VoicevoxUserDictWord| -> Uuid {
             let mut word_uuid = [0u8; 16];
-
-            assert_ok(lib.voicevox_user_dict_add_word(dict, word as *const _, &mut word_uuid));
-
+            assert_ok(lib.voicevox_user_dict_add_word(dict, &raw const *word, &mut word_uuid));
             Uuid::from_slice(&word_uuid).expect("invalid uuid")
         };
 
@@ -58,22 +55,22 @@ impl assert_cdylib::TestCase for TestCase {
         let dict = lib.voicevox_user_dict_new();
 
         // 単語の追加のテスト
-        let word = lib.voicevox_user_dict_word_make(cstr!("hoge").as_ptr(), cstr!("ホゲ").as_ptr());
+        let word = lib.voicevox_user_dict_word_make(c"hoge".as_ptr(), c"ホゲ".as_ptr());
 
         let word_uuid = add_word(dict, &word);
 
-        let json = get_json(&dict);
+        let json = get_json(dict);
 
         assert!(json.contains("ｈｏｇｅ"));
         assert!(json.contains("ホゲ"));
         assert_contains_uuid(&json, &word_uuid);
 
         // 単語の変更のテスト
-        let word = lib.voicevox_user_dict_word_make(cstr!("fuga").as_ptr(), cstr!("フガ").as_ptr());
+        let word = lib.voicevox_user_dict_word_make(c"fuga".as_ptr(), c"フガ".as_ptr());
 
         assert_ok(lib.voicevox_user_dict_update_word(dict, &word_uuid.into_bytes(), &word));
 
-        let json = get_json(&dict);
+        let json = get_json(dict);
 
         assert!(!json.contains("ｈｏｇｅ"));
         assert!(!json.contains("ホゲ"));
@@ -84,14 +81,13 @@ impl assert_cdylib::TestCase for TestCase {
         // 辞書のインポートのテスト。
         let other_dict = lib.voicevox_user_dict_new();
 
-        let other_word =
-            lib.voicevox_user_dict_word_make(cstr!("piyo").as_ptr(), cstr!("ピヨ").as_ptr());
+        let other_word = lib.voicevox_user_dict_word_make(c"piyo".as_ptr(), c"ピヨ".as_ptr());
 
         let other_word_uuid = add_word(other_dict, &other_word);
 
         assert_ok(lib.voicevox_user_dict_import(dict, other_dict));
 
-        let json = get_json(&dict);
+        let json = get_json(dict);
         assert!(json.contains("ｆｕｇａ"));
         assert!(json.contains("フガ"));
         assert_contains_uuid(&json, &word_uuid);
@@ -102,7 +98,7 @@ impl assert_cdylib::TestCase for TestCase {
         // 単語の削除のテスト
         assert_ok(lib.voicevox_user_dict_remove_word(dict, &word_uuid.into_bytes()));
 
-        let json = get_json(&dict);
+        let json = get_json(dict);
         assert_not_contains_uuid(&json, &word_uuid);
         // 他の単語は残っている
         assert_contains_uuid(&json, &other_word_uuid);
@@ -110,13 +106,13 @@ impl assert_cdylib::TestCase for TestCase {
         // 辞書のセーブ・ロードのテスト
         let temp_path = NamedTempFile::new().unwrap().into_temp_path();
         let temp_path = CString::new(temp_path.to_str().unwrap()).unwrap();
-        let word = lib.voicevox_user_dict_word_make(cstr!("hoge").as_ptr(), cstr!("ホゲ").as_ptr());
+        let word = lib.voicevox_user_dict_word_make(c"hoge".as_ptr(), c"ホゲ".as_ptr());
         let word_uuid = add_word(dict, &word);
 
         assert_ok(lib.voicevox_user_dict_save(dict, temp_path.as_ptr()));
         assert_ok(lib.voicevox_user_dict_load(other_dict, temp_path.as_ptr()));
 
-        let json = get_json(&other_dict);
+        let json = get_json(other_dict);
         assert_contains_uuid(&json, &word_uuid);
         assert_contains_uuid(&json, &other_word_uuid);
 

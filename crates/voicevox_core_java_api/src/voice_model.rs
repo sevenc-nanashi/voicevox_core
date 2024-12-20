@@ -13,8 +13,9 @@ impl HasJavaClassIdent for voicevox_core::blocking::VoiceModelFile {
     const JAVA_CLASS_IDENT: &str = "VoiceModelFile";
 }
 
-#[no_mangle]
-unsafe extern "system" fn Java_jp_hiroshiba_voicevoxcore_VoiceModelFile_rsOpen<'local>(
+// SAFETY: voicevox_core_java_apiを構成するライブラリの中に、これと同名のシンボルは存在しない
+#[unsafe(no_mangle)]
+unsafe extern "system" fn Java_jp_hiroshiba_voicevoxcore_blocking_VoiceModelFile_rsOpen<'local>(
     env: JNIEnv<'local>,
     this: JObject<'local>,
     model_path: JString<'local>,
@@ -31,8 +32,9 @@ unsafe extern "system" fn Java_jp_hiroshiba_voicevoxcore_VoiceModelFile_rsOpen<'
     })
 }
 
-#[no_mangle]
-unsafe extern "system" fn Java_jp_hiroshiba_voicevoxcore_VoiceModelFile_rsGetId<'local>(
+// SAFETY: voicevox_core_java_apiを構成するライブラリの中に、これと同名のシンボルは存在しない
+#[unsafe(no_mangle)]
+unsafe extern "system" fn Java_jp_hiroshiba_voicevoxcore_blocking_VoiceModelFile_rsGetId<'local>(
     env: JNIEnv<'local>,
     this: JObject<'local>,
 ) -> jobject {
@@ -48,8 +50,11 @@ unsafe extern "system" fn Java_jp_hiroshiba_voicevoxcore_VoiceModelFile_rsGetId<
     })
 }
 
-#[no_mangle]
-unsafe extern "system" fn Java_jp_hiroshiba_voicevoxcore_VoiceModelFile_rsGetMetasJson<'local>(
+// SAFETY: voicevox_core_java_apiを構成するライブラリの中に、これと同名のシンボルは存在しない
+#[unsafe(no_mangle)]
+unsafe extern "system" fn Java_jp_hiroshiba_voicevoxcore_blocking_VoiceModelFile_rsGetMetasJson<
+    'local,
+>(
     env: JNIEnv<'local>,
     this: JObject<'local>,
 ) -> jobject {
@@ -65,8 +70,9 @@ unsafe extern "system" fn Java_jp_hiroshiba_voicevoxcore_VoiceModelFile_rsGetMet
     })
 }
 
-#[no_mangle]
-unsafe extern "system" fn Java_jp_hiroshiba_voicevoxcore_VoiceModelFile_rsClose<'local>(
+// SAFETY: voicevox_core_java_apiを構成するライブラリの中に、これと同名のシンボルは存在しない
+#[unsafe(no_mangle)]
+unsafe extern "system" fn Java_jp_hiroshiba_voicevoxcore_blocking_VoiceModelFile_rsClose<'local>(
     env: JNIEnv<'local>,
     this: JObject<'local>,
 ) {
@@ -77,8 +83,9 @@ unsafe extern "system" fn Java_jp_hiroshiba_voicevoxcore_VoiceModelFile_rsClose<
     })
 }
 
-#[no_mangle]
-unsafe extern "system" fn Java_jp_hiroshiba_voicevoxcore_VoiceModelFile_rsDrop<'local>(
+// SAFETY: voicevox_core_java_apiを構成するライブラリの中に、これと同名のシンボルは存在しない
+#[unsafe(no_mangle)]
+unsafe extern "system" fn Java_jp_hiroshiba_voicevoxcore_blocking_VoiceModelFile_rsDrop<'local>(
     env: JNIEnv<'local>,
     this: JObject<'local>,
 ) {

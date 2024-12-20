@@ -139,6 +139,12 @@ class OpenJtalk:
         """
         ...
 
+class AudioFeature:
+    @property
+    def frame_length(self) -> int: ...
+    @property
+    def frame_rate(self) -> float: ...
+
 class Synthesizer:
     """
     音声シンセサイザ。
@@ -213,7 +219,7 @@ class Synthesizer:
         モデルが読み込まれているかどうか。
         """
         ...
-    def audio_query_from_kana(
+    def create_audio_query_from_kana(
         self,
         kana: str,
         style_id: Union[StyleId, int],
@@ -233,7 +239,7 @@ class Synthesizer:
         話者とテキストから生成された :class:`AudioQuery` 。
         """
         ...
-    def audio_query(
+    def create_audio_query(
         self,
         text: str,
         style_id: Union[StyleId, int],
@@ -351,6 +357,18 @@ class Synthesizer:
             スタイルID。
         """
         ...
+    def precompute_render(
+        self,
+        audio_query: AudioQuery,
+        style_id: Union[StyleId, int],
+        enable_interrogative_upspeak: bool = True,
+    ) -> AudioFeature: ...
+    def render(
+        self,
+        audio: AudioFeature,
+        start: int,
+        stop: int,
+    ) -> bytes: ...
     def synthesis(
         self,
         audio_query: AudioQuery,
