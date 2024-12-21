@@ -94,7 +94,7 @@ pub(crate) trait InferenceDomain: Sized {
 /// それぞれのバリアントには、対応する`InferenceSignature`が存在するべきである。
 ///
 /// `::macros::InferenceOperation`により導出される。
-pub(crate) trait InferenceOperation: Copy + Enum + Debug {
+pub(crate) trait InferenceOperation: Copy + Enum {
     /// `{InferenceInputSignature,InferenceOutputSignature}::PARAM_INFOS`を集めたもの。
     #[expect(
         clippy::type_complexity,

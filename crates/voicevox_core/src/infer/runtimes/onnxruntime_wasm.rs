@@ -54,7 +54,8 @@ extern "C" {
 pub(crate) mod blocking {
     use super::*;
 
-    static ONNXRUNTIME: LazyLock<Mutex<Option<&'static Onnxruntime>>> = LazyLock::new(|| Mutex::new(None));
+    static ONNXRUNTIME: LazyLock<Mutex<Option<&'static Onnxruntime>>> =
+        LazyLock::new(|| Mutex::new(None));
     #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
     pub struct Onnxruntime {}
 
@@ -79,7 +80,7 @@ pub(crate) mod blocking {
 
 impl InferenceRuntime for blocking::Onnxruntime {
     type Session = OnnxruntimeSession;
-    type RunContext<'a> = OnnxruntimeRunContext<'a>;
+    type RunContext = OnnxruntimeRunContext;
 
     const DISPLAY_NAME: &'static str = "Web版のONNX Runtime";
 
@@ -135,7 +136,7 @@ impl InferenceRuntime for blocking::Onnxruntime {
         }
     }
 
-    fn run(ctx: OnnxruntimeRunContext<'_>) -> anyhow::Result<Vec<OutputTensor>> {
+    fn run_blocking(ctx: OnnxruntimeRunContext) -> anyhow::Result<Vec<OutputTensor>> {
         unsafe {
             let handle_cstr = CString::new(ctx.session.handle.clone())?;
             let inputs = serde_json::to_string(&ctx.inputs)?;
@@ -180,6 +181,11 @@ impl InferenceRuntime for blocking::Onnxruntime {
         }
     }
 
+    async fn run_async(ctx: OnnxruntimeRunContext) -> anyhow::Result<Vec<OutputTensor>> {
+        // とりあえずブロッキング版を呼ぶ
+        Self::run_blocking(ctx)
+    }
+
     fn test_gpu(&self, gpu: GpuSpec) -> anyhow::Result<()> {
         // とりあえずGPUは使えることにする
         Ok(())
@@ -218,33 +224,40 @@ pub(crate) struct Tensor {
     shape: Vec<usize>,
 }
 
-pub(crate) struct OnnxruntimeRunContext<'sess> {
-    session: &'sess mut OnnxruntimeSession,
-    inputs: Vec<Tensor>,
+pub(crate) struct OnnxruntimeRunContext {
+    session: std::sync::Arc<OnnxruntimeSession>,
+    inputs: Vec<(&'static str, Tensor)>,
 }
 
-impl<'sess> From<&'sess mut OnnxruntimeSession> for OnnxruntimeRunContext<'sess> {
-    fn from(sess: &'sess mut OnnxruntimeSession) -> Self {
+impl From<std::sync::Arc<OnnxruntimeSession>> for OnnxruntimeRunContext {
+    fn from(session: std::sync::Arc<OnnxruntimeSession>) -> Self {
         Self {
-            session: sess,
+            session,
             inputs: vec![],
         }
     }
 }
 
-impl PushInputTensor for OnnxruntimeRunContext<'_> {
+impl PushInputTensor for OnnxruntimeRunContext {
     #[duplicate_item(
         method           T       kind_item;
         [ push_int64 ]   [ i64 ] [ Int64 ];
         [ push_float32 ] [ f32 ] [ Float32 ];
     )]
-    fn method(&mut self, tensor: Array<T, impl Dimension + 'static>) -> anyhow::Result<()> {
+    fn method(
+        &mut self,
+        name: &'static str,
+        tensor: Array<T, impl Dimension + 'static>,
+    ) -> anyhow::Result<()> {
         let shape = tensor.shape().to_vec();
         let tensor_vec = tensor.into_raw_vec();
-        self.inputs.push(Tensor {
-            data: TensorData::kind_item(tensor_vec),
-            shape,
-        });
+        self.inputs.push((
+            name,
+            Tensor {
+                data: TensorData::kind_item(tensor_vec),
+                shape,
+            },
+        ));
 
         Ok(())
     }

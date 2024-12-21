@@ -2,7 +2,7 @@ addToLibrary({
   $onnxruntime_injection__postset: "onnxruntime_injection();",
   $onnxruntime_injection: function () {
     let onnxruntime;
-    import("onnxruntime-web").then((onnxruntime_) => {
+    import("onnxruntime-web/webgpu").then((onnxruntime_) => {
       onnxruntime = onnxruntime_;
       console.log("onnxruntime-web loaded");
       console.log(onnxruntime_);
@@ -92,7 +92,7 @@ addToLibrary({
       ) {
         const session = sessions[UTF8ToString(sessionHandle)];
         const inputsObj =
-          /** @type {{shape: number[], data: {kind: string, array: number[]}}[] */ (
+          /** @type [name: string, tensor: {shape: number[], data: {kind: string, array: number[]}}][] */ (
             JSON.parse(UTF8ToString(inputs))
           );
         const nonce = generateNonce();
@@ -108,13 +108,9 @@ addToLibrary({
               /** @type {{[key: string]: {cpuData: {[key: number]: number}, dims: number[], type: string}}} */ (
                 await session.run(
                   Object.fromEntries(
-                    inputsObj.map((input, i) => [
-                      session.inputNames[i],
-                      new onnxruntime.Tensor(
-                        input.data.kind,
-                        input.data.array,
-                        input.shape,
-                      ),
+                    inputsObj.map(([name, { shape, data }]) => [
+                      name,
+                      new onnxruntime.Tensor(data.kind, data.array, shape),
                     ]),
                   ),
                 )
