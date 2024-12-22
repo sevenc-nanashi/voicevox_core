@@ -180,7 +180,7 @@ export class Synthesizer {
         [
           onnxruntime,
           openJtalkRc._pointer,
-          accelerationMode,
+          1,
           cpuNumThreads,
           returnPtr,
         ],

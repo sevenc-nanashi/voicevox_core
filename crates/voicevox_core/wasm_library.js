@@ -1,20 +1,24 @@
+// @ts-check
+/// <reference path="./wasm_library_env.d.ts" />
+/// <reference types="vite/client" />
+
 addToLibrary({
   $onnxruntime_injection__postset: "onnxruntime_injection();",
   $onnxruntime_injection: function () {
+    /** @type {typeof import("onnxruntime-web")} */
     let onnxruntime;
     import("onnxruntime-web/webgpu").then((onnxruntime_) => {
       onnxruntime = onnxruntime_;
       console.log("onnxruntime-web loaded");
       console.log(onnxruntime_);
-      onnxruntime_.env.wasm.wasmPaths = "/node_modules/onnxruntime-web/dist/";
-      window.onnxruntime = onnxruntime_;
+      onnxruntime_.env.wasm.wasmPaths = import.meta.env?.BASE_URL || "/";
     });
 
     let nonce = 0;
     const generateNonce = () => {
       return (nonce++).toString(16);
     };
-    const toCharPtr = (str) => {
+    const toCharPtr = (/** @type {string} */ str) => {
       const bin = new TextEncoder().encode(str);
       const ptr = _malloc(bin.length + 1);
       HEAP8.set(bin, ptr);
@@ -22,6 +26,7 @@ addToLibrary({
       return ptr;
     };
 
+    /** @type {{[key: string]: import("onnxruntime-web").InferenceSession}} */
     const sessions = {};
     class Onnxruntime {
       newSession(
@@ -39,7 +44,7 @@ addToLibrary({
             if (useGpu) {
               console.log("onnxruntime session create with GPU");
               session = await onnxruntime.InferenceSession.create(modelData, {
-                executionProviders: ["webgl", "wasm"],
+                executionProviders: ["webgpu", "wasm", "cpu"],
               }).catch((e) => {
                 console.error("Failed to create session with GPU", e);
                 console.error(e);
@@ -49,7 +54,7 @@ addToLibrary({
             if (!session) {
               console.log("onnxruntime session create with WASM");
               session = await onnxruntime.InferenceSession.create(modelData, {
-                executionProviders: ["cpu"],
+                executionProviders: ["wasm", "cpu"],
               });
             }
             sessions[nonce] = session;
@@ -92,7 +97,7 @@ addToLibrary({
       ) {
         const session = sessions[UTF8ToString(sessionHandle)];
         const inputsObj =
-          /** @type [name: string, tensor: {shape: number[], data: {kind: string, array: number[]}}][] */ (
+          /** @type [name: string, tensor: {shape: number[], data: {kind: "int64" | "float64", array: number[]}}][] */ (
             JSON.parse(UTF8ToString(inputs))
           );
         const nonce = generateNonce();
@@ -104,27 +109,28 @@ addToLibrary({
               throw new Error("session not found");
             }
             console.log(inputsObj);
-            const result =
-              /** @type {{[key: string]: {cpuData: {[key: number]: number}, dims: number[], type: string}}} */ (
-                await session.run(
-                  Object.fromEntries(
-                    inputsObj.map(([name, { shape, data }]) => [
-                      name,
-                      new onnxruntime.Tensor(data.kind, data.array, shape),
-                    ]),
-                  ),
-                )
-              );
+            const result = await session.run(
+              Object.fromEntries(
+                inputsObj.map(([name, { shape, data }]) => [
+                  name,
+                  new onnxruntime.Tensor(data.kind, data.array, shape),
+                ]),
+              ),
+            );
             console.log("onnxruntime session run result");
-            const tensors = Object.values(result).map((tensor) => ({
-              shape: tensor.dims,
-              data: {
-                kind: tensor.type,
-                array: Object.entries(tensor.cpuData)
-                  .sort(([a], [b]) => a - b)
-                  .map(([, value]) => value),
-              },
-            }));
+            const tensors = await Promise.all(
+              Object.values(result).map(async (tensor) => {
+                const data = await tensor.getData();
+                return {
+                  shape: tensor.dims,
+                  data: {
+                    kind: tensor.type,
+                    // @ts-expect-error string[]
+                    array: Array.from(data),
+                  },
+                };
+              }),
+            );
             console.log(tensors);
             const resultStr = JSON.stringify({
               type: "ok",
@@ -150,14 +156,13 @@ addToLibrary({
     }
 
     const inst = new Onnxruntime();
+    // @ts-expect-error
     _onnxruntime_inference_session_new = inst.newSession.bind(inst);
+    // @ts-expect-error
     _onnxruntime_inference_session_run = inst.sessionRun.bind(inst);
   },
   onnxruntime_inference_session_new: function () {},
   onnxruntime_inference_session_new__deps: ["$onnxruntime_injection"],
   onnxruntime_inference_session_run: function () {},
   onnxruntime_inference_session_run__deps: ["$onnxruntime_injection"],
-
-  emscripten_memcpy_js: (dest, src, num) =>
-    HEAPU8.copyWithin(dest, src, src + num),
 });
