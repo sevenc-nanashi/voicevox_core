@@ -47,3 +47,10 @@ zip -r ../../../example/wasm/public/open_jtalk_dic.zip open_jtalk_dic
   - WebGPU：動いた！
     - とはいってもそんなに早くならなかった。残念。
   - WebNN：1.17まで下げた影響により、存在が抹消されたのでN/A。
+- 2024/12/23：動いた！！！！！！！！！！！
+  - 修正ビルドをした：<https://github.com/Hiroshiba/vv_core_inference/issues/27#issuecomment-2558365897>
+  - WebGPU：動いた！
+    - 速い！めちゃめちゃ速い！！！やばい！！！！！
+  - WebNN：動いた...けど...
+    - wasmとほとんど変わらない速度だった。残念。
+    - 自分のPCのGPUが弱い可能性はある。

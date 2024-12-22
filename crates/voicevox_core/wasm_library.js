@@ -7,7 +7,7 @@ addToLibrary({
   $onnxruntime_injection: function () {
     /** @type {typeof import("onnxruntime-web")} */
     let onnxruntime;
-    import("onnxruntime-web/webgpu").then((onnxruntime_) => {
+    import("onnxruntime-web/all").then((onnxruntime_) => {
       onnxruntime = onnxruntime_;
       console.log("onnxruntime-web loaded");
       console.log(onnxruntime_);
@@ -44,7 +44,7 @@ addToLibrary({
             if (useGpu) {
               console.log("onnxruntime session create with GPU");
               session = await onnxruntime.InferenceSession.create(modelData, {
-                executionProviders: ["webgpu", "wasm", "cpu"],
+                executionProviders: ["webnn", "wasm", "cpu"],
               }).catch((e) => {
                 console.error("Failed to create session with GPU", e);
                 console.error(e);
