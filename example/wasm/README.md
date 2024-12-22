@@ -54,3 +54,5 @@ zip -r ../../../example/wasm/public/open_jtalk_dic.zip open_jtalk_dic
   - WebNN：動いた...けど...
     - wasmとほとんど変わらない速度だった。残念。
     - 自分のPCのGPUが弱い可能性はある。
+  - ![image](https://github.com/user-attachments/assets/16c1ea61-30a1-4ae5-a230-61b8be43a970)
+  - <https://docs.google.com/spreadsheets/d/1qkyddNZCqwFJjN0hV47Xbg9_ewl4DN6EC089RvP67L8/edit?usp=sharing>
