@@ -12,6 +12,9 @@ importers:
         specifier: ^1.20.1
         version: 1.20.1
     devDependencies:
+      '@webonnx/wonnx-wasm':
+        specifier: ^0.5.1
+        version: 0.5.1
       vite:
         specifier: ^6.0.5
         version: 6.0.5(@types/node@22.10.2)
@@ -293,6 +296,9 @@ packages:
   '@types/node@22.10.2':
     resolution: {integrity: sha512-Xxr6BBRCAOQixvonOye19wnzyDiUtTeqldOOmj3CkeblonbccA12PFwlufvRdrpjXxqnmUaeiU5EOA+7s5diUQ==}
 
+  '@webonnx/wonnx-wasm@0.5.1':
+    resolution: {integrity: sha512-t0+w2ZMb6LC1xKs0hqw3wx6i2Et4kNH6bfHtgjYj+fufEhQ6J2pE+gabOo8JOIqniQu9cA+jP3VwoBQ6f4+L9w==}
+
   esbuild@0.24.0:
     resolution: {integrity: sha512-FuLPevChGDshgSicjisSooU0cemp/sGXR841D5LHMB7mTVOmsEHcAxaH3irL53+8YDIeVNQEySh4DaYU/iuPqQ==}
     engines: {node: '>=18'}
@@ -548,6 +554,8 @@ snapshots:
   '@types/node@22.10.2':
     dependencies:
       undici-types: 6.20.0
+
+  '@webonnx/wonnx-wasm@0.5.1': {}
 
   esbuild@0.24.0:
     optionalDependencies:

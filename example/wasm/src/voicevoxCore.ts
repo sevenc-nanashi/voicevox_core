@@ -196,7 +196,7 @@ export class Synthesizer {
     return synthesizer;
   }
   constructor(
-    private openJtalkRc: OpenJtalkRc,
+    public openJtalkRc: OpenJtalkRc,
     public _pointer: Pointer<"VoicevoxSynthesizer">,
   ) {}
 
