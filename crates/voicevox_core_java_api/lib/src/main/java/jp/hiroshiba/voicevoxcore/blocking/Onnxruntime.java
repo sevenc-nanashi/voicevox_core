@@ -2,7 +2,6 @@ package jp.hiroshiba.voicevoxcore.blocking;
 
 import static jp.hiroshiba.voicevoxcore.GlobalInfo.SupportedDevices;
 
-import com.google.gson.Gson;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import java.util.Optional;
@@ -14,7 +13,7 @@ import jp.hiroshiba.voicevoxcore.internal.Dll;
  * <p>シングルトンであり、インスタンスは高々一つ。
  *
  * <pre>
- * Onnxruntime ort1 = Onnxruntime.loadOnce().exec();
+ * Onnxruntime ort1 = Onnxruntime.loadOnce().perform();
  * Onnxruntime ort2 = Onnxruntime.get().get();
  * assert ort1 == ort2;
  * </pre>
@@ -25,7 +24,7 @@ public class Onnxruntime {
   }
 
   /** ONNX Runtimeのライブラリ名。 */
-  public static final String LIB_NAME = "onnxruntime";
+  public static final String LIB_NAME = "voicevox_onnxruntime";
 
   /** 推奨されるONNX Runtimeのバージョン。 */
   public static final String LIB_VERSION = "1.17.3";
@@ -96,7 +95,7 @@ public class Onnxruntime {
      *
      * @return {@link Onnxruntime}。
      */
-    public Onnxruntime exec() {
+    public Onnxruntime perform() {
       synchronized (Onnxruntime.class) {
         if (instance == null) {
           instance = new Onnxruntime(filename);
@@ -122,16 +121,10 @@ public class Onnxruntime {
    * @return {@link SupportedDevices}。
    */
   public SupportedDevices supportedDevices() {
-    Gson gson = new Gson();
-    String supportedDevicesJson = rsSupportedDevices();
-    SupportedDevices supportedDevices = gson.fromJson(supportedDevicesJson, SupportedDevices.class);
-    if (supportedDevices == null) {
-      throw new NullPointerException("supported_devices");
-    }
-    return supportedDevices;
+    return rsSupportedDevices();
   }
 
   private native void rsNew(@Nullable String filename);
 
-  private native String rsSupportedDevices();
+  private native SupportedDevices rsSupportedDevices();
 }

@@ -15,11 +15,12 @@ use tracing::info;
 use crate::{
     devices::{DeviceSpec, GpuSpec, SupportedDevices},
     error::ErrorRepr,
+    voice_model::ModelBytes,
 };
 
 use super::super::{
-    DecryptModelError, InferenceRuntime, InferenceSessionOptions, InputScalarKind,
-    OutputScalarKind, OutputTensor, ParamInfo, PushInputTensor,
+    InferenceRuntime, InferenceSessionOptions, InputScalarKind, OutputScalarKind, OutputTensor,
+    ParamInfo, PushInputTensor,
 };
 
 static RESULTS: LazyLock<Mutex<HashMap<String, String>>> =
@@ -40,6 +41,7 @@ extern "C" {
     fn onnxruntime_inference_session_new(
         model: *const u8,
         model_len: usize,
+        kind: *const i8,
         use_gpu: bool,
         callback: extern "C" fn(*const u8, *const u8) -> (),
     ) -> *const u8;
@@ -94,7 +96,7 @@ impl InferenceRuntime for blocking::Onnxruntime {
 
     fn new_session(
         &self,
-        model: impl FnOnce() -> std::result::Result<Vec<u8>, DecryptModelError>,
+        model: &ModelBytes,
         options: InferenceSessionOptions,
     ) -> anyhow::Result<(
         Self::Session,
@@ -103,12 +105,16 @@ impl InferenceRuntime for blocking::Onnxruntime {
     )> {
         unsafe {
             info!("creating new session");
-            let model = model()?;
-            let model_len = model.len();
+            let (sess, kind) = match model {
+                ModelBytes::Onnx(onnx) => (onnx.clone(), "onnx"),
+                ModelBytes::VvBin(bin) => (bin.clone(), "vvbin"),
+            };
+            let model_len = sess.len();
             let cpu_num_threads = options.cpu_num_threads as usize;
             let use_gpu = options.device != DeviceSpec::Cpu;
+            let kind_cstr = CString::new(kind)?;
             let nonce =
-                onnxruntime_inference_session_new(model.as_ptr(), model_len, use_gpu, js_callback);
+                onnxruntime_inference_session_new(sess.as_ptr(), model_len, kind_cstr.as_ptr(), use_gpu, js_callback);
 
             let nonce = CStr::from_ptr(nonce as *const i8)
                 .to_str()

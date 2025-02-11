@@ -5,7 +5,12 @@ import com.google.gson.annotations.SerializedName;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 
-/** スタイル（style）のメタ情報。 */
+/**
+ * <i>スタイル</i>のメタ情報。
+ *
+ * <p>現在この型はGSONに対応しているが、将来的には <a href="https://github.com/VOICEVOX/voicevox_core/issues/984"
+ * target="_blank">Jacksonに切り替わる予定</a> 。
+ */
 public class StyleMeta {
   /** スタイル名。 */
   @SerializedName("name")
@@ -25,9 +30,9 @@ public class StyleMeta {
   public final StyleType type;
 
   /**
-   * 話者の順番。
+   * スタイルの順番。
    *
-   * <p>{@link SpeakerMeta#styles}の列は、この値に対して昇順に並んでいるべきである。
+   * <p>{@link CharacterMeta#styles}の列は、この値に対して昇順に並んでいるべきである。
    */
   @SerializedName("order")
   @Expose

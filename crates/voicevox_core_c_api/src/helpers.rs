@@ -40,13 +40,14 @@ pub(crate) fn into_result_code_with_error(result: CApiResult<()>) -> VoicevoxRes
                 StyleNotFound => VOICEVOX_RESULT_STYLE_NOT_FOUND_ERROR,
                 ModelNotFound => VOICEVOX_RESULT_MODEL_NOT_FOUND_ERROR,
                 RunModel => VOICEVOX_RESULT_RUN_MODEL_ERROR,
-                ExtractFullContextLabel => VOICEVOX_RESULT_EXTRACT_FULL_CONTEXT_LABEL_ERROR,
+                AnalyzeText => VOICEVOX_RESULT_ANALYZE_TEXT_ERROR,
                 ParseKana => VOICEVOX_RESULT_PARSE_KANA_ERROR,
                 LoadUserDict => VOICEVOX_RESULT_LOAD_USER_DICT_ERROR,
                 SaveUserDict => VOICEVOX_RESULT_SAVE_USER_DICT_ERROR,
                 WordNotFound => VOICEVOX_RESULT_USER_DICT_WORD_NOT_FOUND_ERROR,
                 UseUserDict => VOICEVOX_RESULT_USE_USER_DICT_ERROR,
                 InvalidWord => VOICEVOX_RESULT_INVALID_USER_DICT_WORD_ERROR,
+                __NonExhaustive => unreachable!(),
             },
             Err(InvalidUtf8Input) => VOICEVOX_RESULT_INVALID_UTF8_INPUT_ERROR,
             Err(InvalidAudioQuery(_)) => VOICEVOX_RESULT_INVALID_AUDIO_QUERY_ERROR,
@@ -99,6 +100,7 @@ impl From<voicevox_core::AccelerationMode> for VoicevoxAccelerationMode {
             Auto => Self::VOICEVOX_ACCELERATION_MODE_AUTO,
             Cpu => Self::VOICEVOX_ACCELERATION_MODE_CPU,
             Gpu => Self::VOICEVOX_ACCELERATION_MODE_GPU,
+            __NonExhaustive => unreachable!(),
         }
     }
 }
@@ -186,6 +188,7 @@ impl From<voicevox_core::UserDictWordType> for VoicevoxUserDictWordType {
                 Self::VOICEVOX_USER_DICT_WORD_TYPE_ADJECTIVE
             }
             voicevox_core::UserDictWordType::Suffix => Self::VOICEVOX_USER_DICT_WORD_TYPE_SUFFIX,
+            voicevox_core::UserDictWordType::__NonExhaustive => unreachable!(),
         }
     }
 }

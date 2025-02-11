@@ -6,7 +6,7 @@ use jni::{
     objects::{JObject, JThrowable},
     JNIEnv,
 };
-use tracing::{debug, warn};
+use tracing::debug;
 use uuid::Uuid;
 use voicevox_core::__internal::interop::raii::MaybeClosed;
 
@@ -23,13 +23,13 @@ macro_rules! object_type {
     };
 }
 #[macro_export]
-macro_rules! enum_object {
-    ($env: ident, $name: literal, $variant: literal) => {
-        $env.get_static_field(object!($name), $variant, object_type!($name))
+macro_rules! static_field {
+    ($env: ident, $name: literal, $field: literal) => {
+        $env.get_static_field(object!($name), $field, object_type!($name))
             .unwrap_or_else(|_| {
                 panic!(
                     "Failed to get field {}",
-                    concat!($variant, "L", object!($name), ";")
+                    concat!($field, "L", object!($name), ";")
                 )
             })
             .l()
@@ -67,6 +67,7 @@ where
                                             "Exception",
                                         ),
                                     )*
+                                    voicevox_core::ErrorKind::__NonExhaustive => unreachable!(),
                                 }
                             };
                         }
@@ -85,7 +86,7 @@ where
                             StyleNotFound,
                             ModelNotFound,
                             RunModel,
-                            ExtractFullContextLabel,
+                            AnalyzeText,
                             ParseKana,
                             LoadUserDict,
                             SaveUserDict,
@@ -221,23 +222,6 @@ impl<T: HasJavaClassIdent> Closable<T> {
             debug!("Closing a `{}`", T::JAVA_CLASS_IDENT);
         }
         drop(mem::replace(lock, MaybeClosed::Closed));
-    }
-}
-
-impl<T: HasJavaClassIdent> Drop for Closable<T> {
-    fn drop(&mut self) {
-        let content = mem::replace(
-            self.0.get_mut().unwrap_or_else(|e| panic!("{e}")),
-            MaybeClosed::Closed,
-        );
-        if let MaybeClosed::Open(content) = content {
-            warn!(
-                "デストラクタにより`{}`のクローズを行います。通常は、可能な限り`close`でクローズす\
-                 るようにして下さい",
-                T::JAVA_CLASS_IDENT,
-            );
-            drop(content);
-        }
     }
 }
 

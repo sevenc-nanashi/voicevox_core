@@ -4,6 +4,7 @@ version.workspace = true
 edition.workspace = true
 publish.workspace = true
 rust-version.workspace = true
+license.workspace = true
 
 [package.metadata.docs.rs]
 features = ["load-onnxruntime", "link-onnxruntime"]
@@ -25,7 +26,7 @@ camino.workspace = true
 const_format.workspace = true
 derive-getters.workspace = true
 derive-new.workspace = true
-derive_more = { workspace = true, features = ["add", "deref", "display", "from", "from_str"] }
+derive_more = { workspace = true, features = ["add", "deref", "display", "from", "from_str", "index"] }
 duplicate.workspace = true
 easy-ext.workspace = true
 educe.workspace = true
@@ -51,9 +52,9 @@ tempfile.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
 uuid = { workspace = true, features = ["v4", "serde"] }
-voicevox-ort = { workspace = true, features = ["download-binaries", "__init-for-voicevox"] }
+voicevox_core_macros.workspace = true
+
 [dev-dependencies]
-heck.workspace = true
 pollster = { workspace = true, features = ["macro"] }
 pretty_assertions.workspace = true
 rstest.workspace = true
@@ -70,10 +71,7 @@ windows = { version = "0.43.0", features = [
 
 [target."cfg(not(target_family = \"wasm\"))".dependencies]
 async_zip = { workspace = true, features = ["deflate"] }
-voicevox-ort = { workspace = true, features = [
-  "download-binaries",
-  "__init-for-voicevox",
-] }
+voicevox-ort = { workspace = true, features = ["download-binaries", "__init-for-voicevox"] }
 
 [lints.rust]
 unsafe_code = "allow" # WindowsのGPU情報表示に、Win32を利用

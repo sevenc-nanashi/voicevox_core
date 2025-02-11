@@ -11,7 +11,7 @@ export default defineConfig(async () => {
         targets: [
           {
             src: "./node_modules/onnxruntime-web/dist/*.wasm",
-            dest: "./",
+            dest: "./onnxruntime",
           },
         ],
       }),

@@ -1,6 +1,7 @@
 package jp.hiroshiba.voicevoxcore.blocking;
 
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import jakarta.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -10,7 +11,8 @@ import java.util.UUID;
 import jp.hiroshiba.voicevoxcore.AccelerationMode;
 import jp.hiroshiba.voicevoxcore.AccentPhrase;
 import jp.hiroshiba.voicevoxcore.AudioQuery;
-import jp.hiroshiba.voicevoxcore.SpeakerMeta;
+import jp.hiroshiba.voicevoxcore.CharacterMeta;
+import jp.hiroshiba.voicevoxcore.StyleType;
 import jp.hiroshiba.voicevoxcore.exceptions.InvalidModelDataException;
 import jp.hiroshiba.voicevoxcore.exceptions.RunModelException;
 import jp.hiroshiba.voicevoxcore.internal.Dll;
@@ -63,10 +65,12 @@ public class Synthesizer {
    * @return メタ情報。
    */
   @Nonnull
-  public SpeakerMeta[] metas() {
-    Gson gson = new Gson();
+  public CharacterMeta[] metas() {
+    GsonBuilder gsonBuilder = new GsonBuilder();
+    gsonBuilder.registerTypeAdapter(StyleType.class, new StyleType.Deserializer());
+    Gson gson = gsonBuilder.create();
     String metasJson = rsGetMetasJson();
-    SpeakerMeta[] rawMetas = gson.fromJson(metasJson, SpeakerMeta[].class);
+    CharacterMeta[] rawMetas = gson.fromJson(metasJson, CharacterMeta[].class);
     if (rawMetas == null) {
       throw new NullPointerException("metas");
     }
@@ -253,7 +257,7 @@ public class Synthesizer {
    * @param audioQuery {@link AudioQuery}。
    * @param styleId スタイルID。
    * @return {@link SynthesisConfigurator}。
-   * @see SynthesisConfigurator#execute
+   * @see SynthesisConfigurator#perform
    */
   @Nonnull
   public SynthesisConfigurator synthesis(AudioQuery audioQuery, int styleId) {
@@ -266,7 +270,7 @@ public class Synthesizer {
    * @param kana AquesTalk風記法。
    * @param styleId スタイルID。
    * @return {@link TtsFromKanaConfigurator}。
-   * @see TtsFromKanaConfigurator#execute
+   * @see TtsFromKanaConfigurator#perform
    */
   @Nonnull
   public TtsFromKanaConfigurator ttsFromKana(String kana, int styleId) {
@@ -279,7 +283,7 @@ public class Synthesizer {
    * @param text 日本語のテキスト。
    * @param styleId スタイルID。
    * @return {@link TtsConfigurator}。
-   * @see TtsConfigurator#execute
+   * @see TtsConfigurator#perform
    */
   @Nonnull
   public TtsConfigurator tts(String text, int styleId) {
@@ -434,7 +438,7 @@ public class Synthesizer {
      * @throws RunModelException 推論に失敗した場合。
      */
     @Nonnull
-    public byte[] execute() throws RunModelException {
+    public byte[] perform() throws RunModelException {
       if (!Utils.isU32(styleId)) {
         throw new IllegalArgumentException("styleId");
       }
@@ -479,7 +483,7 @@ public class Synthesizer {
      * @throws RunModelException 推論に失敗した場合。
      */
     @Nonnull
-    public byte[] execute() throws RunModelException {
+    public byte[] perform() throws RunModelException {
       if (!Utils.isU32(styleId)) {
         throw new IllegalArgumentException("styleId");
       }
@@ -522,7 +526,7 @@ public class Synthesizer {
      * @throws RunModelException 推論に失敗した場合。
      */
     @Nonnull
-    public byte[] execute() throws RunModelException {
+    public byte[] perform() throws RunModelException {
       if (!Utils.isU32(styleId)) {
         throw new IllegalArgumentException("styleId");
       }

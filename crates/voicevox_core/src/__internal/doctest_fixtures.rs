@@ -17,12 +17,12 @@ pub async fn synthesizer_with_sample_voice_model(
         #[cfg(feature = "load-onnxruntime")]
         crate::nonblocking::Onnxruntime::load_once()
             .filename(onnxruntime_dylib_path)
-            .exec()
+            .perform()
             .await?,
         #[cfg(any(feature = "link-onnxruntime"))]
         crate::nonblocking::Onnxruntime::init_once().await?,
     )
-    .open_jtalk(crate::nonblocking::OpenJtalk::new(open_jtalk_dic_dir).await?)
+    .text_analyzer(crate::nonblocking::OpenJtalk::new(open_jtalk_dic_dir).await?)
     .acceleration_mode(AccelerationMode::Cpu)
     .build()?;
 

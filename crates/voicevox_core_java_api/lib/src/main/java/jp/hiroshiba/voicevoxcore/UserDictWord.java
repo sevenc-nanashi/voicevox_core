@@ -1,12 +1,24 @@
 package jp.hiroshiba.voicevoxcore;
 
+import com.google.gson.JsonDeserializationContext;
+import com.google.gson.JsonDeserializer;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonParseException;
+import com.google.gson.JsonPrimitive;
+import com.google.gson.JsonSerializationContext;
+import com.google.gson.JsonSerializer;
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
 import jakarta.annotation.Nonnull;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 
-/** ユーザー辞書の単語。 */
+/**
+ * ユーザー辞書の単語。
+ *
+ * <p>現在この型はGSONに対応しているが、将来的には <a href="https://github.com/VOICEVOX/voicevox_core/issues/984"
+ * target="_blank">Jacksonに切り替わる予定</a> 。
+ */
 public class UserDictWord {
   /** 単語の表層形。 */
   @SerializedName("surface")
@@ -114,30 +126,66 @@ public class UserDictWord {
   private static native void rsValidatePronunciation(String pronunciation);
 
   /** 単語の種類。 */
-  public static enum Type {
+  public static class Type {
     /** 固有名詞。 */
-    @SerializedName("PROPER_NOUN")
-    @Expose
-    PROPER_NOUN,
+    public static final Type PROPER_NOUN = new Type("PROPER_NOUN");
 
     /** 一般名詞。 */
-    @SerializedName("COMMON_NOUN")
-    @Expose
-    COMMON_NOUN,
+    public static final Type COMMON_NOUN = new Type("COMMON_NOUN");
 
     /** 動詞。 */
-    @SerializedName("VERB")
-    @Expose
-    VERB,
+    public static final Type VERB = new Type("VERB");
 
     /** 形容詞。 */
-    @SerializedName("ADJECTIVE")
-    @Expose
-    ADJECTIVE,
+    public static final Type ADJECTIVE = new Type("ADJECTIVE");
 
     /** 語尾。 */
-    @SerializedName("SUFFIX")
-    @Expose
-    SUFFIX,
+    public static final Type SUFFIX = new Type("SUFFIX");
+
+    public static final class Serializer implements JsonSerializer<Type> {
+      @Override
+      public JsonElement serialize(
+          Type src, java.lang.reflect.Type typeOfSrc, JsonSerializationContext context) {
+        return new JsonPrimitive(src.toString());
+      }
+    }
+
+    public static final class Deserializer implements JsonDeserializer<Type> {
+      @Override
+      public Type deserialize(
+          JsonElement json, java.lang.reflect.Type typeOfT, JsonDeserializationContext context)
+          throws JsonParseException {
+        String value = json.getAsString();
+        switch (value) {
+          case "PROPER_NOUN":
+            return PROPER_NOUN;
+          case "COMMON_NOUN":
+            return COMMON_NOUN;
+          case "VERB":
+            return VERB;
+          case "ADJECTIVE":
+            return ADJECTIVE;
+          case "SUFFIX":
+            return SUFFIX;
+          default:
+            throw new JsonParseException(
+                String.format(
+                    "Invalid variant `%s`, expected one of "
+                        + "`PROPER_NOUN`, `COMMON_NOUN`, `VERB`, `ADJECTIVE`, `SUFFIX`",
+                    value));
+        }
+      }
+    }
+
+    private final String identifier;
+
+    private Type(String identifier) {
+      this.identifier = identifier;
+    }
+
+    @Override
+    public String toString() {
+      return identifier;
+    }
   }
 }

@@ -1,5 +1,5 @@
 from os import PathLike
-from typing import TYPE_CHECKING, Dict, List, Literal, Union
+from typing import TYPE_CHECKING, NoReturn, Union
 from uuid import UUID
 
 if TYPE_CHECKING:
@@ -7,7 +7,7 @@ if TYPE_CHECKING:
         AccelerationMode,
         AccentPhrase,
         AudioQuery,
-        SpeakerMeta,
+        CharacterMeta,
         StyleId,
         SupportedDevices,
         UserDictWord,
@@ -18,8 +18,11 @@ class VoiceModelFile:
     """
     音声モデルファイル。"""
 
+    def __new__(
+        cls, *args: tuple[object], **kwargs: dict[object, object]
+    ) -> NoReturn: ...
     @staticmethod
-    async def open(path: Union[str, PathLike[str]]) -> VoiceModelFile:
+    async def open(path: str | PathLike[str]) -> VoiceModelFile:
         """
         VVMファイルを開く。
 
@@ -39,11 +42,21 @@ class VoiceModelFile:
         ...
     @property
     def id(self) -> VoiceModelId:
-        """ID。"""
+        """
+        ID。
+
+        :attr:`close` および :attr:`__aexit__` の後でも利用可能。
+        """
         ...
     @property
-    def metas(self) -> List[SpeakerMeta]:
-        """メタ情報。"""
+    def metas(self) -> list[CharacterMeta]:
+        """
+        メタ情報。
+
+        この中身を書き換えても、 ``VoiceModelFile`` としての動作には影響しない。
+
+        :attr:`close` および :attr:`__aexit__` の後でも利用可能。
+        """
         ...
     async def __aenter__(self) -> "VoiceModelFile": ...
     async def __aexit__(self, exc_type, exc_value, traceback) -> None: ...
@@ -69,7 +82,7 @@ class Onnxruntime:
 
     # ここの定数値が本物と合致するかどうかは、test_type_stub_consts.pyで担保する。
 
-    LIB_NAME: str = "onnxruntime"
+    LIB_NAME: str = "voicevox_onnxruntime"
     """ONNX Runtimeのライブラリ名。"""
 
     LIB_VERSION: str = "1.17.3"
@@ -85,6 +98,9 @@ class Onnxruntime:
     LIB_UNVERSIONED_FILENAME: str
     """:attr:`LIB_NAME` からなる動的ライブラリのファイル名。"""
 
+    def __new__(
+        cls, *args: tuple[object], **kwargs: dict[object, object]
+    ) -> NoReturn: ...
     @staticmethod
     def get() -> Union["Onnxruntime", None]:
         """
@@ -120,8 +136,11 @@ class OpenJtalk:
     テキスト解析器としてのOpen JTalk。
     """
 
+    def __new__(
+        cls, *args: tuple[object], **kwargs: dict[object, object]
+    ) -> NoReturn: ...
     @staticmethod
-    async def new(open_jtalk_dict_dir: Union[str, PathLike[str]]) -> "OpenJtalk":
+    async def new(open_jtalk_dict_dir: str | PathLike[str]) -> "OpenJtalk":
         """
         ``OpenJTalk`` を生成する。
 
@@ -165,9 +184,8 @@ class Synthesizer:
         self,
         onnxruntime: Onnxruntime,
         open_jtalk: OpenJtalk,
-        acceleration_mode: Union[
-            AccelerationMode, Literal["AUTO", "CPU", "GPU"]
-        ] = AccelerationMode.AUTO,
+        *,
+        acceleration_mode: AccelerationMode = "AUTO",
         cpu_num_threads: int = 0,
     ) -> None: ...
     def __repr__(self) -> str: ...
@@ -181,8 +199,7 @@ class Synthesizer:
     def is_gpu_mode(self) -> bool:
         """ハードウェアアクセラレーションがGPUモードかどうか。"""
         ...
-    @property
-    def metas(self) -> List[SpeakerMeta]:
+    def metas(self) -> list[CharacterMeta]:
         """メタ情報。"""
         ...
     async def load_voice_model(self, model: VoiceModelFile) -> None:
@@ -195,7 +212,7 @@ class Synthesizer:
             読み込むモデルのスタイルID。
         """
         ...
-    def unload_voice_model(self, voice_model_id: Union[VoiceModelId, UUID]) -> None:
+    def unload_voice_model(self, voice_model_id: VoiceModelId | UUID) -> None:
         """
         音声モデルの読み込みを解除する。
 
@@ -205,7 +222,7 @@ class Synthesizer:
             音声モデルID。
         """
         ...
-    def is_loaded_voice_model(self, voice_model_id: Union[VoiceModelId, UUID]) -> bool:
+    def is_loaded_voice_model(self, voice_model_id: VoiceModelId | UUID) -> bool:
         """
         指定したvoice_model_idのモデルが読み込まれているか判定する。
 
@@ -222,7 +239,7 @@ class Synthesizer:
     async def create_audio_query_from_kana(
         self,
         kana: str,
-        style_id: Union[StyleId, int],
+        style_id: StyleId | int,
     ) -> AudioQuery:
         """
         AquesTalk風記法から :class:`AudioQuery` を生成する。
@@ -236,13 +253,13 @@ class Synthesizer:
 
         Returns
         -------
-        話者とテキストから生成された :class:`AudioQuery` 。
+        スタイルとテキストから生成された :class:`AudioQuery` 。
         """
         ...
     async def create_audio_query(
         self,
         text: str,
-        style_id: Union[StyleId, int],
+        style_id: StyleId | int,
     ) -> AudioQuery:
         """
         日本語のテキストから :class:`AudioQuery` を生成する。
@@ -256,14 +273,14 @@ class Synthesizer:
 
         Returns
         -------
-        話者とテキストから生成された :class:`AudioQuery` 。
+        スタイルとテキストから生成された :class:`AudioQuery` 。
         """
         ...
     async def create_accent_phrases_from_kana(
         self,
         kana: str,
-        style_id: Union[StyleId, int],
-    ) -> List[AccentPhrase]:
+        style_id: StyleId | int,
+    ) -> list[AccentPhrase]:
         """
         AquesTalk風記法からAccentPhrase（アクセント句）の配列を生成する。
 
@@ -282,8 +299,8 @@ class Synthesizer:
     async def create_accent_phrases(
         self,
         text: str,
-        style_id: Union[StyleId, int],
-    ) -> List[AccentPhrase]:
+        style_id: StyleId | int,
+    ) -> list[AccentPhrase]:
         """
         日本語のテキストからAccentPhrase（アクセント句）の配列を生成する。
 
@@ -301,9 +318,9 @@ class Synthesizer:
         ...
     async def replace_mora_data(
         self,
-        accent_phrases: List[AccentPhrase],
-        style_id: Union[StyleId, int],
-    ) -> List[AccentPhrase]:
+        accent_phrases: list[AccentPhrase],
+        style_id: StyleId | int,
+    ) -> list[AccentPhrase]:
         """
         アクセント句の音高・音素長を変更した新しいアクセント句の配列を生成する。
 
@@ -323,9 +340,9 @@ class Synthesizer:
         ...
     async def replace_phoneme_length(
         self,
-        accent_phrases: List[AccentPhrase],
-        style_id: Union[StyleId, int],
-    ) -> List[AccentPhrase]:
+        accent_phrases: list[AccentPhrase],
+        style_id: StyleId | int,
+    ) -> list[AccentPhrase]:
         """
         アクセント句の音素長を変更した新しいアクセント句の配列を生成する。
 
@@ -341,9 +358,9 @@ class Synthesizer:
         ...
     async def replace_mora_pitch(
         self,
-        accent_phrases: List[AccentPhrase],
-        style_id: Union[StyleId, int],
-    ) -> List[AccentPhrase]:
+        accent_phrases: list[AccentPhrase],
+        style_id: StyleId | int,
+    ) -> list[AccentPhrase]:
         """
         アクセント句の音高を変更した新しいアクセント句の配列を生成する。
 
@@ -360,7 +377,8 @@ class Synthesizer:
     async def synthesis(
         self,
         audio_query: AudioQuery,
-        style_id: Union[StyleId, int],
+        style_id: StyleId | int,
+        *,
         enable_interrogative_upspeak: bool = True,
     ) -> bytes:
         """
@@ -383,7 +401,8 @@ class Synthesizer:
     async def tts_from_kana(
         self,
         kana: str,
-        style_id: Union[StyleId, int],
+        style_id: StyleId | int,
+        *,
         enable_interrogative_upspeak: bool = True,
     ) -> bytes:
         """
@@ -402,7 +421,8 @@ class Synthesizer:
     async def tts(
         self,
         text: str,
-        style_id: Union[StyleId, int],
+        style_id: StyleId | int,
+        *,
         enable_interrogative_upspeak: bool = True,
     ) -> bytes:
         """
@@ -427,12 +447,11 @@ class Synthesizer:
 class UserDict:
     """ユーザー辞書。"""
 
-    @property
-    def words(self) -> Dict[UUID, UserDictWord]:
-        """このオプジェクトの :class:`dict` としての表現。"""
+    def to_dict(self) -> dict[UUID, UserDictWord]:
+        """このオプジェクトを :class:`dict` に変換する。"""
         ...
     def __init__(self) -> None: ...
-    async def load(self, path: Union[str, PathLike[str]]) -> None:
+    async def load(self, path: str | PathLike[str]) -> None:
         """ファイルに保存されたユーザー辞書を読み込む。
 
         Parameters
@@ -441,7 +460,7 @@ class UserDict:
             ユーザー辞書のパス。
         """
         ...
-    async def save(self, path: Union[str, PathLike[str]]) -> None:
+    async def save(self, path: str | PathLike[str]) -> None:
         """
         ユーザー辞書をファイルに保存する。
 

@@ -1,10 +1,19 @@
-use std::{collections::HashMap, ffi::CString, mem::MaybeUninit, sync::LazyLock};
+use std::{
+    collections::HashMap,
+    env,
+    ffi::{CStr, CString},
+    mem::MaybeUninit,
+    sync::LazyLock,
+};
 
 use assert_cmd::assert::AssertResult;
+use const_format::concatcp;
 use libloading::Library;
 use serde::{Deserialize, Serialize};
 use test_util::{
-    c_api::{self, CApi, VoicevoxInitializeOptions, VoicevoxResultCode},
+    c_api::{
+        self, CApi, VoicevoxInitializeOptions, VoicevoxLoadOnnxruntimeOptions, VoicevoxResultCode,
+    },
     OPEN_JTALK_DIC_DIR,
 };
 
@@ -38,10 +47,24 @@ impl assert_cdylib::TestCase for TestCase {
 
         let onnxruntime = {
             let mut onnxruntime = MaybeUninit::uninit();
-            assert_ok(lib.voicevox_onnxruntime_load_once(
-                lib.voicevox_make_default_load_onnxruntime_options(),
-                onnxruntime.as_mut_ptr(),
-            ));
+            assert_ok(
+                lib.voicevox_onnxruntime_load_once(
+                    VoicevoxLoadOnnxruntimeOptions {
+                        filename: CStr::from_bytes_with_nul(
+                            concatcp!(
+                                env::consts::DLL_PREFIX,
+                                "onnxruntime",
+                                env::consts::DLL_SUFFIX,
+                                '\0'
+                            )
+                            .as_ref(),
+                        )
+                        .expect("this ends with nul")
+                        .as_ptr(),
+                    },
+                    onnxruntime.as_mut_ptr(),
+                ),
+            );
             onnxruntime.assume_init()
         };
 
@@ -88,7 +111,7 @@ impl assert_cdylib::TestCase for TestCase {
 
         std::assert_eq!(SNAPSHOTS.output[&self.text].wav_length, wav_length);
 
-        lib.voicevox_voice_model_file_close(model);
+        lib.voicevox_voice_model_file_delete(model);
         lib.voicevox_open_jtalk_rc_delete(openjtalk);
         lib.voicevox_synthesizer_delete(synthesizer);
         lib.voicevox_wav_free(wav);
@@ -105,7 +128,7 @@ impl assert_cdylib::TestCase for TestCase {
     fn assert_output(&self, output: Utf8Output) -> AssertResult {
         output
             .mask_timestamps()
-            .mask_onnxruntime_version()
+            .mask_onnxruntime_filename()
             .mask_windows_video_cards()
             .assert()
             .try_success()?

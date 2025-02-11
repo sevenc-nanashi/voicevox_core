@@ -6,28 +6,28 @@ use itertools::Itertools as _;
 use serde::{Deserialize, Serialize};
 use tracing::warn;
 
-/// [`speaker_uuid`]をキーとして複数の[`SpeakerMeta`]をマージする。
+/// [`speaker_uuid`]をキーとして複数の[`CharacterMeta`]をマージする。
 ///
-/// マージする際話者は[`SpeakerMeta::order`]、スタイルは[`StyleMeta::order`]をもとに安定ソートされる。
-/// `order`が無い話者とスタイルは、そうでないものよりも後ろに置かれる。
+/// マージする際キャラクターは[`CharacterMeta::order`]、スタイルは[`StyleMeta::order`]をもとに安定ソートされる。
+/// `order`が無いキャラクターとスタイルは、そうでないものよりも後ろに置かれる。
 ///
-/// [`speaker_uuid`]: SpeakerMeta::speaker_uuid
-pub fn merge<'a>(metas: impl IntoIterator<Item = &'a SpeakerMeta>) -> Vec<SpeakerMeta> {
+/// [`speaker_uuid`]: CharacterMeta::speaker_uuid
+pub fn merge<'a>(metas: impl IntoIterator<Item = &'a CharacterMeta>) -> Vec<CharacterMeta> {
     return metas
         .into_iter()
-        .fold(IndexMap::<_, SpeakerMeta>::new(), |mut acc, speaker| {
-            acc.entry(&speaker.speaker_uuid)
-                .and_modify(|acc| acc.styles.extend(speaker.styles.clone()))
-                .or_insert_with(|| speaker.clone());
+        .fold(IndexMap::<_, CharacterMeta>::new(), |mut acc, character| {
+            acc.entry(&character.speaker_uuid)
+                .and_modify(|acc| acc.styles.extend(character.styles.clone()))
+                .or_insert_with(|| character.clone());
             acc
         })
         .into_values()
-        .update(|speaker| {
-            speaker
+        .update(|character| {
+            character
                 .styles
                 .sort_by_key(|&StyleMeta { order, .. }| key(order));
         })
-        .sorted_by_key(|&SpeakerMeta { order, .. }| key(order))
+        .sorted_by_key(|&CharacterMeta { order, .. }| key(order))
         .collect();
 
     fn key(order: Option<u32>) -> impl Ord {
@@ -37,17 +37,12 @@ pub fn merge<'a>(metas: impl IntoIterator<Item = &'a SpeakerMeta>) -> Vec<Speake
     }
 }
 
-/// [`StyleId`]の実体。
-///
-/// [`StyleId`]: StyleId
-pub type RawStyleId = u32;
-
 /// スタイルID。
 ///
-/// VOICEVOXにおける、ある[**話者**(_speaker_)]のある[**スタイル**(_style_)]を指す。
+/// VOICEVOXにおける、ある[<i>キャラクター</i>]のある[<i>スタイル</i>]を指す。
 ///
-/// [**話者**(_speaker_)]: SpeakerMeta
-/// [**スタイル**(_style_)]: StyleMeta
+/// [<i>キャラクター</i>]: CharacterMeta
+/// [<i>スタイル</i>]: StyleMeta
 #[derive(
     PartialEq,
     Eq,
@@ -62,62 +57,49 @@ pub type RawStyleId = u32;
     new,
     Debug,
 )]
-pub struct StyleId(RawStyleId);
-
-impl StyleId {
-    pub fn raw_id(self) -> RawStyleId {
-        self.0
-    }
-}
+#[doc(alias = "VoicevoxStyleId")]
+pub struct StyleId(pub u32);
 
 impl Display for StyleId {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.raw_id())
+        write!(f, "{}", self.0)
     }
 }
 
-/// [`StyleVersion`]の実体。
+/// [<i>キャラクター</i>]のバージョン。
 ///
-/// [`StyleVersion`]: StyleVersion
-pub type RawStyleVersion = String;
-
-/// スタイルのバージョン。
+/// [<i>キャラクター</i>]: CharacterMeta
 #[derive(PartialEq, Eq, Clone, Ord, PartialOrd, Deserialize, Serialize, new, Debug)]
-pub struct StyleVersion(RawStyleVersion);
+pub struct CharacterVersion(pub String);
 
-impl StyleVersion {
-    pub fn raw_version(&self) -> &RawStyleVersion {
-        &self.0
-    }
-}
-
-impl Display for StyleVersion {
+impl Display for CharacterVersion {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.raw_version())
+        write!(f, "{}", self.0)
     }
 }
 
 /// 音声モデルのメタ情報。
-pub type VoiceModelMeta = Vec<SpeakerMeta>;
+pub type VoiceModelMeta = Vec<CharacterMeta>;
 
-/// **話者**(_speaker_)のメタ情報。
+/// <i>キャラクター</i>のメタ情報。
 #[derive(Deserialize, Serialize, Clone)]
-pub struct SpeakerMeta {
-    /// 話者名。
+#[non_exhaustive]
+pub struct CharacterMeta {
+    /// キャラクター名。
     pub name: String,
-    /// 話者に属するスタイル。
+    /// キャラクターに属するスタイル。
     pub styles: Vec<StyleMeta>,
-    /// 話者のバージョン。
-    pub version: StyleVersion,
-    /// 話者のUUID。
+    /// キャラクターのバージョン。
+    pub version: CharacterVersion,
+    /// キャラクターのUUID。
     pub speaker_uuid: String,
-    /// 話者の順番。
+    /// キャラクターの順番。
     ///
-    /// `SpeakerMeta`の列は、この値に対して昇順に並んでいるべきである。
+    /// `CharacterMeta`の列は、この値に対して昇順に並んでいるべきである。
     pub order: Option<u32>,
 }
 
-impl SpeakerMeta {
+impl CharacterMeta {
     /// # Panics
     ///
     /// `speaker_uuid`が異なるときパニックする。
@@ -159,8 +141,9 @@ impl SpeakerMeta {
     }
 }
 
-/// **スタイル**(_style_)のメタ情報。
+/// <i>スタイル</i>のメタ情報。
 #[derive(Deserialize, Serialize, Clone)]
+#[non_exhaustive]
 pub struct StyleMeta {
     /// スタイルID。
     pub id: StyleId,
@@ -171,11 +154,13 @@ pub struct StyleMeta {
     pub r#type: StyleType,
     /// スタイルの順番。
     ///
-    /// [`SpeakerMeta::styles`]は、この値に対して昇順に並んでいるべきである。
+    /// [`CharacterMeta::styles`]は、この値に対して昇順に並んでいるべきである。
     pub order: Option<u32>,
 }
 
-/// **スタイル**(_style_)に対応するモデルの種類。
+/// [<i>スタイル</i>]に対応するモデルの種類。
+///
+/// [<i>スタイル</i>]: StyleMeta
 #[derive(
     Default,
     Clone,
@@ -192,6 +177,7 @@ pub struct StyleMeta {
 )]
 #[strum(serialize_all = "snake_case")]
 #[serde(rename_all = "snake_case")]
+#[non_exhaustive]
 pub enum StyleType {
     /// 音声合成クエリの作成と音声合成が可能。
     #[default]

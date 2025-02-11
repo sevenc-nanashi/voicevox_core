@@ -60,7 +60,7 @@ pub unsafe extern "C" fn voicevox_synthesizer_synthesis_wasm(
     style_id: VoicevoxStyleId,
     options_enable_interrogative_upspeak: bool,
     output_wav_length: NonNull<usize>,
-    output_wav: NonNull<*mut u8>,
+    output_wav: NonNull<NonNull<u8>>,
 ) -> VoicevoxResultCode {
     let options = VoicevoxSynthesisOptions {
         enable_interrogative_upspeak: options_enable_interrogative_upspeak,
@@ -90,7 +90,7 @@ pub unsafe extern "C" fn voicevox_synthesizer_tts_from_kana_wasm(
     style_id: VoicevoxStyleId,
     options_enable_interrogative_upspeak: bool,
     output_wav_length: NonNull<usize>,
-    output_wav: NonNull<*mut u8>,
+    output_wav: NonNull<NonNull<u8>>,
 ) -> VoicevoxResultCode {
     let options = VoicevoxTtsOptions {
         enable_interrogative_upspeak: options_enable_interrogative_upspeak,
@@ -112,7 +112,7 @@ pub unsafe extern "C" fn voicevox_synthesizer_tts_wasm(
     style_id: VoicevoxStyleId,
     options_enable_interrogative_upspeak: bool,
     output_wav_length: NonNull<usize>,
-    output_wav: NonNull<*mut u8>,
+    output_wav: NonNull<NonNull<u8>>,
 ) -> VoicevoxResultCode {
     let options = VoicevoxTtsOptions {
         enable_interrogative_upspeak: options_enable_interrogative_upspeak,
